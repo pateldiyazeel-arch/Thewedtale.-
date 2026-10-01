@@ -4,7 +4,6 @@
    Supabase + Vanilla JavaScript
    ========================================================= */
 
-alert("SCRIPT.JS IS WORKING");
 /* =========================================================
    SUPABASE CONFIG
    ========================================================= */
@@ -16,6 +15,7 @@ const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_ulkNYzcEkfVG_y2BhOwOhw_PLG80nSK";
 
 let supabaseClient = null;
+console.log("Supabase object:", window.supabase);
 
 const STORAGE_BUCKET = "vendor-images";
 
