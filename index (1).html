@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>The Wed Tale Gujarat — Your Gujarat Wedding. Your Story.</title>
+
+    <meta name="description"
+          content="Discover the best wedding vendors across Gujarat with The Wed Tale Gujarat.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<header class="site-header">
+
+    <div class="nav-container">
+
+        <a href="#" class="logo" onclick="showPage('home')">
+            <span class="logo-main">THE WED TALE</span>
+            <span class="logo-sub">GUJARAT</span>
+        </a>
+
+        <nav class="desktop-nav">
+            <a href="#" onclick="showPage('home')">Home</a>
+            <a href="#" onclick="showPage('vendors')">Find Vendors</a>
+            <a href="#" onclick="showPage('categories')">Categories</a>
+            <a href="#" onclick="showPage('about')">About</a>
+        </nav>
+
+        <div class="nav-actions" id="navActions">
+            <button class="text-btn" onclick="openAuth('login')">
+                Login
+            </button>
+
+            <button class="dark-btn small" onclick="openAuth('signup')">
+                Join
+            </button>
+        </div>
+
+        <button class="mobile-menu-btn"
+                onclick="toggleMobileMenu()"
+                aria-label="Open menu">
+            ☰
+        </button>
+
+    </div>
+
+    <div class="mobile-menu" id="mobileMenu">
+
+        <a href="#" onclick="showPage('home');toggleMobileMenu()">
+            Home
+        </a>
+
+        <a href="#" onclick="showPage('vendors');toggleMobileMenu()">
+            Find Vendors
+        </a>
+
+        <a href="#" onclick="showPage('categories');toggleMobileMenu()">
+            Categories
+        </a>
+
+        <a href="#" onclick="showPage('about');toggleMobileMenu()">
+            About
+        </a>
+
+        <button onclick="openAuth('login');toggleMobileMenu()">
+            Login
+        </button>
+
+        <button class="dark-btn"
+                onclick="openAuth('signup');toggleMobileMenu()">
+            Join The Wed Tale
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     MAIN APP
+===================================================== -->
+
+<main id="app">
+
+
+<!-- =====================================================
+     HOME PAGE
+===================================================== -->
+
+<section id="homePage" class="page active">
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <p class="eyebrow">
+                GUJARAT'S WEDDING DISCOVERY PLATFORM
+            </p>
+
+            <h1>
+                Your Gujarat Wedding.
+                <em>Your Story.</em>
+            </h1>
+
+            <p class="hero-description">
+                Discover talented wedding vendors, beautiful venues
+                and everything you need to create a celebration
+                that feels completely yours.
+            </p>
+
+            <div class="hero-buttons">
+
+                <button class="dark-btn"
+                        onclick="showPage('vendors')">
+                    Explore Vendors
+                </button>
+
+                <button class="outline-btn"
+                        onclick="openAuth('signup','vendor')">
+                    List Your Business
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="hero-image">
+
+            <div class="hero-card">
+
+                <div class="hero-card-overlay">
+
+                    <span>THE WED TALE</span>
+
+                    <strong>
+                        Discover
+                        <br>
+                        Your Vendors.
+                    </strong>
+
+                    <button onclick="showPage('vendors')">
+                        Explore →
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- SEARCH -->
+
+    <section class="home-search-section">
+
+        <div class="section-heading centered">
+
+            <p class="eyebrow">
+                START EXPLORING
+            </p>
+
+            <h2>
+                Find the people behind
+                <br>
+                your perfect celebration.
+            </h2>
+
+        </div>
+
+        <div class="main-search">
+
+            <div class="search-input-wrap">
+                <span>⌕</span>
+
+                <input
+    type="file"
+    id="portfolioImages"
+    accept="image/*"
+><input
+                    id="homeSearch"
+                    type="text"
+                    placeholder="Search photographers, makeup artists, venues..."
+                    onkeydown="homeSearchKey(event)"
+                >
+            </div>
+
+            <button class="dark-btn"
+                    onclick="searchFromHome()">
+                Search
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <!-- CATEGORIES -->
+
+    <section class="section">
+
+        <div class="section-heading">
+
+            <div>
+                <p class="eyebrow">
+                    EXPLORE
+                </p>
+
+                <h2>
+                    Find by category
+                </h2>
+            </div>
+
+            <button class="arrow-btn"
+                    onclick="showPage('categories')">
+                View all →
+            </button>
+
+        </div>
+
+        <div class="category-grid" id="homeCategories"></div>
+
+    </section>
+
+
+    <!-- FEATURED -->
+
+    <section class="section soft-section">
+
+        <div class="section-heading">
+
+            <div>
+                <p class="eyebrow">
+                    CURATED FOR YOU
+                </p>
+
+                <h2>
+                    Featured vendors
+                </h2>
+            </div>
+
+            <button class="arrow-btn"
+                    onclick="showPage('vendors')">
+                Explore all →
+            </button>
+
+        </div>
+
+        <div class="vendor-grid"
+             id="featuredVendors"></div>
+
+    </section>
+
+
+    <!-- CTA -->
+
+    <section class="join-section">
+
+        <div>
+
+            <p class="eyebrow">
+                ARE YOU A WEDDING PROFESSIONAL?
+            </p>
+
+            <h2>
+                Put your work
+                <br>
+                in front of couples.
+            </h2>
+
+            <p>
+                Create your profile and let couples
+                across Gujarat discover your work.
+            </p>
+
+            <button class="dark-btn"
+                    onclick="openAuth('signup','vendor')">
+                List Your Business
+            </button>
+
+        </div>
+
+    </section>
+
+</section>
+
+
+<!-- =====================================================
+     VENDORS PAGE
+===================================================== -->
+
+<section id="vendorsPage" class="page">
+
+    <div class="page-header">
+
+        <p class="eyebrow">
+            THE WED TALE DIRECTORY
+        </p>
+
+        <h1>
+            Find your wedding vendors.
+        </h1>
+
+        <p>
+            Explore talented professionals from
+            across Gujarat.
+        </p>
+
+    </div>
+
+
+    <div class="filter-area">
+
+        <div class="directory-search">
+
+            <span>⌕</span>
+
+            <input
+                id="vendorSearch"
+                type="text"
+                placeholder="Search vendors..."
+                oninput="filterVendors()"
+            >
+
+        </div>
+
+        <select id="categoryFilter"
+                onchange="filterVendors()">
+
+            <option value="">All Categories</option>
+
+        </select>
+
+        <select id="cityFilter"
+                onchange="filterVendors()">
+
+            <option value="">All Cities</option>
+
+        </select>
+
+    </div>
+
+
+    <div class="results-info">
+
+        <span id="resultCount">
+            0 vendors
+        </span>
+
+    </div>
+
+
+    <div class="vendor-grid"
+         id="vendorGrid"></div>
+
+</section>
+
+
+<!-- =====================================================
+     CATEGORIES PAGE
+===================================================== -->
+
+<section id="categoriesPage" class="page">
+
+    <div class="page-header">
+
+        <p class="eyebrow">
+            DISCOVER
+        </p>
+
+        <h1>
+            Everything for your wedding.
+        </h1>
+
+        <p>
+            Explore Gujarat's wedding ecosystem,
+            category by category.
+        </p>
+
+    </div>
+
+    <div class="category-large-grid"
+         id="allCategories"></div>
+
+</section>
+
+
+<!-- =====================================================
+     VENDOR PROFILE PAGE
+===================================================== -->
+
+<section id="profilePage" class="page">
+
+    <div id="profileContent"></div>
+
+</section>
+
+
+<!-- =====================================================
+     FAVOURITES PAGE
+===================================================== -->
+
+<section id="favoritesPage" class="page">
+
+    <div class="page-header">
+
+        <p class="eyebrow">
+            YOUR COLLECTION
+        </p>
+
+        <h1>
+            Saved vendors.
+        </h1>
+
+        <p>
+            Keep your favourite wedding discoveries
+            in one place.
+        </p>
+
+    </div>
+
+    <div class="vendor-grid"
+         id="favoritesGrid"></div>
+
+</section>
+
+
+<!-- =====================================================
+     DASHBOARD PAGE
+===================================================== -->
+
+<section id="dashboardPage" class="page">
+
+    <div id="dashboardContent"></div>
+
+</section>
+
+
+<!-- =====================================================
+     ABOUT PAGE
+===================================================== -->
+
+<section id="aboutPage" class="page">
+
+    <div class="about-hero">
+
+        <p class="eyebrow">
+            ABOUT THE WED TALE
+        </p>
+
+        <h1>
+            Weddings deserve
+            <em>better discovery.</em>
+        </h1>
+
+        <p>
+            The Wed Tale Gujarat is a modern wedding discovery
+            platform built to connect couples with the people,
+            places and brands that make celebrations memorable.
+        </p>
+
+    </div>
+
+    <div class="about-grid">
+
+        <div>
+            <span>01</span>
+            <h3>Discover</h3>
+            <p>
+                Find wedding professionals based on
+                what actually matters to you.
+            </p>
+        </div>
+
+        <div>
+            <span>02</span>
+            <h3>Save</h3>
+            <p>
+                Build your own collection of vendors
+                while planning your celebration.
+            </p>
+        </div>
+
+        <div>
+            <span>03</span>
+            <h3>Connect</h3>
+            <p>
+                Discover businesses and contact them
+                directly.
+            </p>
+        </div>
+
+    </div>
+
+</section>
+
+
+</main>
+
+
+<!-- =====================================================
+     AUTH MODAL
+===================================================== -->
+
+<div class="modal" id="authModal">
+
+    <div class="modal-box">
+
+        <button class="modal-close"
+                onclick="closeModal('authModal')">
+            ×
+        </button>
+
+        <div class="auth-logo">
+            THE WED TALE
+            <small>GUJARAT</small>
+        </div>
+
+        <div id="authContent"></div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     TOAST
+===================================================== -->
+
+<div class="toast"
+     id="toast">
+</div>
+
+
+<!-- =====================================================
+     FOOTER
+===================================================== -->
+
+<footer>
+
+    <div class="footer-top">
+
+        <div>
+
+            <a href="#" class="logo footer-logo"
+               onclick="showPage('home')">
+
+                <span class="logo-main">
+                    THE WED TALE
+                </span>
+
+                <span class="logo-sub">
+                    GUJARAT
+                </span>
+
+            </a>
+
+            <p>
+                Your Gujarat Wedding.
+                Your Story.
+            </p>
+
+        </div>
+
+        <div>
+
+            <h4>Explore</h4>
+
+            <a href="#" onclick="showPage('vendors')">
+                Vendors
+            </a>
+
+            <a href="#" onclick="showPage('categories')">
+                Categories
+            </a>
+
+            <a href="#" onclick="showPage('about')">
+                About
+            </a>
+
+        </div>
+
+        <div>
+
+            <h4>For Vendors</h4>
+
+            <a href="#"
+               onclick="openAuth('signup','vendor')">
+                List Your Business
+            </a>
+
+            <a href="#"
+               onclick="openAuth('login')">
+                Vendor Login
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="footer-bottom">
+
+        <span>
+            © 2026 The Wed Tale Gujarat
+        </span>
+
+        <span>
+            Made for modern Gujarat weddings.
+        </span>
+
+    </div>
+
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
