@@ -7,6 +7,16 @@
 /* =========================================================
    SUPABASE CONFIG
    ========================================================= */
+alert("SCRIPT STARTED");
+
+window.onerror = function(message, source, lineno, colno, error) {
+    alert(
+        "JS ERROR:\n" +
+        message +
+        "\nLine: " +
+        lineno
+    );
+};
 
 const SUPABASE_URL =
     "https://tfdzcmmLUXwAXZcmvsuk.supabase.co";
