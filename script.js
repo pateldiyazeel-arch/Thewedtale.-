@@ -1,121 +1,48 @@
 /* =========================================================
    THE WED TALE GUJARAT
-   SUPABASE VERSION
-   =========================================================
-
-   This version uses:
-
-   Supabase Auth
-   → Real user accounts
-
-   Supabase Database
-   → Profiles
-   → Vendors
-   → Favourites
-   → Vendor images
-
-   Supabase Storage
-   → Vendor portfolio images
-
-   No localStorage is used for users, vendors or favourites.
-
-========================================================= */
-
-"use strict";
-
+   SCRIPT.JS
+   Supabase + Vanilla JavaScript
+   ========================================================= */
 
 /* =========================================================
-   SUPABASE CONNECTION
-========================================================= */
+   SUPABASE CONFIG
+   ========================================================= */
 
-const SUPABASE_URL =
-    "https://tfdzcmmluxwaxzcmvsuk.supabase.co";
-
+const SUPABASE_URL = "https://tfdzcmmLUXwAXZcmvsuk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_ulkNYzcEkfVG_y2BhOwOhw_PLG80nSK";
+    "sb_publishable_ulKNYzcEkfVG_y2Bh0w0hw_PLG80nSK";
 
-const supabaseClient =
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
-    );
-
-console.log(
-    "Supabase connected:",
-    !!supabaseClient
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
 );
-
-
-/* =========================================================
-   CONSTANTS
-========================================================= */
 
 const STORAGE_BUCKET = "vendor-images";
 
+console.log("The Wed Tale Gujarat loaded.");
+console.log("Supabase connected:", !!supabaseClient);
+
+
+/* =========================================================
+   GLOBAL STATE
+   ========================================================= */
+
+let currentUser = null;
+let currentProfile = null;
+let currentVendor = null;
+let allVendors = [];
+let currentPage = "home";
 
 const categories = [
-    {
-        name: "Photographers",
-        description: "Frames that tell your story."
-    },
-    {
-        name: "Videographers",
-        description: "Films you'll want to replay."
-    },
-    {
-        name: "Makeup Artists",
-        description: "Beauty made personal."
-    },
-    {
-        name: "Mehendi Artists",
-        description: "Art for your hands."
-    },
-    {
-        name: "Decorators",
-        description: "Spaces made unforgettable."
-    },
-    {
-        name: "Wedding Venues",
-        description: "The place where it begins."
-    },
-    {
-        name: "Bridal Wear",
-        description: "For your main character moment."
-    },
-    {
-        name: "Jewellery",
-        description: "The finishing details."
-    },
-    {
-        name: "Groom Wear",
-        description: "Modern looks for the groom."
-    },
-    {
-        name: "Caterers",
-        description: "Food worth remembering."
-    },
-    {
-        name: "DJs & Music",
-        description: "Set the mood."
-    },
-    {
-        name: "Choreographers",
-        description: "Make your celebration move."
-    },
-    {
-        name: "Wedding Planners",
-        description: "Your vision, beautifully managed."
-    },
-    {
-        name: "Invitations",
-        description: "The first chapter."
-    },
-    {
-        name: "Cakes",
-        description: "Sweet details."
-    }
+    "Photographers",
+    "Videographers",
+    "Makeup Artists",
+    "Mehendi Artists",
+    "Decorators",
+    "Wedding Venues",
+    "Bridal Wear",
+    "Jewellery"
 ];
-
 
 const cities = [
     "Ahmedabad",
@@ -123,140 +50,2321 @@ const cities = [
     "Surat",
     "Rajkot",
     "Gandhinagar",
-    "Udaipur",
     "Anand",
-    "Mehsana",
     "Bhavnagar",
-    "Junagadh"
+    "Jamnagar",
+    "Junagadh",
+    "Vapi",
+    "Bharuch",
+    "Mehsana",
+    "Other"
 ];
 
 
 /* =========================================================
-   DEMO VENDORS
-========================================================= */
+   INITIALIZATION
+   ========================================================= */
 
-const demoVendors = [
-    {
-        id: "demo-1",
-        user_id: null,
-        business_name: "Aarohi Frames",
-        category: "Photographers",
-        city: "Ahmedabad",
-        starting_price: 80000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "Contemporary wedding photography focused on honest emotions, editorial portraits and timeless celebrations.",
-        cover_image:
-            "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
-    },
+document.addEventListener("DOMContentLoaded", async () => {
+    setupCategoryUI();
+    setupMobileMenu();
+    setupGlobalEvents();
 
-    {
-        id: "demo-2",
-        user_id: null,
-        business_name: "Maison Mehendi",
-        category: "Mehendi Artists",
-        city: "Vadodara",
-        starting_price: 15000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "Fine-line bridal mehendi with contemporary compositions and personalised details.",
-        cover_image:
-            "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
-    },
+    await checkSession();
+    await loadVendors();
 
-    {
-        id: "demo-3",
-        user_id: null,
-        business_name: "The Ivory House",
-        category: "Wedding Venues",
-        city: "Ahmedabad",
-        starting_price: 250000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "A refined celebration space designed for intimate weddings, receptions and elegant gatherings.",
-        cover_image:
-            "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
-    },
+    renderHome();
+});
 
-    {
-        id: "demo-4",
-        user_id: null,
-        business_name: "Studio Nysa",
-        category: "Makeup Artists",
-        city: "Surat",
-        starting_price: 25000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "Modern bridal beauty with skin-focused makeup and polished editorial finishes.",
-        cover_image:
-            "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
-    },
 
-    {
-        id: "demo-5",
-        user_id: null,
-        business_name: "Atelier Baraat",
-        category: "Decorators",
-        city: "Rajkot",
-        starting_price: 150000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "Modern wedding environments combining architecture, florals, texture and light.",
-        cover_image:
-            "https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
-    },
+/* =========================================================
+   AUTH SESSION
+   ========================================================= */
 
-    {
-        id: "demo-6",
-        user_id: null,
-        business_name: "Noor Bridal Studio",
-        category: "Bridal Wear",
-        city: "Ahmedabad",
-        starting_price: 60000,
-        phone: "",
-        whatsapp: "",
-        instagram: "",
-        website: "",
-        description:
-            "Contemporary bridal silhouettes with intricate craftsmanship and modern styling.",
-        cover_image:
-            "https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=900&q=85",
-        is_approved: true
+async function checkSession() {
+    try {
+        const {
+            data: { session },
+            error
+        } = await supabaseClient.auth.getSession();
+
+        if (error) {
+            console.error("Session error:", error);
+            return;
+        }
+
+        if (session && session.user) {
+            currentUser = session.user;
+            await loadCurrentProfile();
+        } else {
+            currentUser = null;
+            currentProfile = null;
+        }
+
+        updateNavigation();
+
+    } catch (error) {
+        console.error("checkSession error:", error);
     }
-];
+
+    supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+        currentUser = session?.user || null;
+
+        if (currentUser) {
+            await loadCurrentProfile();
+        } else {
+            currentProfile = null;
+        }
+
+        updateNavigation();
+    });
+}
 
 
 /* =========================================================
-   CURRENT USER STATE
-========================================================= */
+   PROFILE
+   ========================================================= */
 
-let currentUser = null;
-let currentProfile = null;
+async function loadCurrentProfile() {
+    if (!currentUser) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("profiles")
+            .select("*")
+            .eq("id", currentUser.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Profile loading error:", error);
+            return;
+        }
+
+        currentProfile = data;
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 
 /* =========================================================
-   UTILITY
-========================================================= */
+   NAVIGATION
+   ========================================================= */
+
+function updateNavigation() {
+    const nav = document.getElementById("navActions");
+
+    if (!nav) return;
+
+    if (currentUser) {
+        nav.innerHTML = `
+            <button class="text-btn" onclick="showPage('dashboard')">
+                Dashboard
+            </button>
+
+            <button class="dark-btn small" onclick="logout()">
+                Logout
+            </button>
+        `;
+    } else {
+        nav.innerHTML = `
+            <button class="text-btn" onclick="openAuth('login')">
+                Login
+            </button>
+
+            <button class="dark-btn small" onclick="openAuth('signup')">
+                Join
+            </button>
+        `;
+    }
+}
+
+
+function showPage(page) {
+    const pages = document.querySelectorAll(".page");
+
+    pages.forEach(section => {
+        section.classList.remove("active");
+    });
+
+    const target = document.getElementById(page + "Page");
+
+    if (target) {
+        target.classList.add("active");
+    }
+
+    currentPage = page;
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+    if (page === "home") {
+        renderHome();
+    }
+
+    if (page === "vendors") {
+        loadVendors();
+    }
+
+    if (page === "categories") {
+        renderCategoriesPage();
+    }
+
+    if (page === "favorites") {
+        renderFavorites();
+    }
+
+    if (page === "dashboard") {
+        renderDashboard();
+    }
+}
+
+
+/* =========================================================
+   MOBILE MENU
+   ========================================================= */
+
+function toggleMobileMenu() {
+    const menu = document.getElementById("mobileMenu");
+
+    if (!menu) return;
+
+    menu.classList.toggle("open");
+}
+
+function setupMobileMenu() {
+    const menu = document.getElementById("mobileMenu");
+
+    if (!menu) return;
+
+    menu.addEventListener("click", event => {
+        if (event.target.tagName === "A") {
+            menu.classList.remove("open");
+        }
+    });
+}
+
+
+/* =========================================================
+   GLOBAL EVENTS
+   ========================================================= */
+
+function setupGlobalEvents() {
+    document.addEventListener("click", event => {
+        const modal = event.target.closest(".modal");
+
+        if (modal && event.target === modal) {
+            modal.classList.remove("open");
+        }
+    });
+}
+
+
+/* =========================================================
+   AUTH MODAL
+   ========================================================= */
+
+function openAuth(mode = "login", accountType = "viewer") {
+    const modal = document.getElementById("authModal");
+    const content = document.getElementById("authContent");
+
+    if (!modal || !content) return;
+
+    if (mode === "signup") {
+        content.innerHTML = signupHTML(accountType);
+    } else {
+        content.innerHTML = loginHTML();
+    }
+
+    modal.classList.add("open");
+}
+
+
+function signupHTML(accountType = "viewer") {
+    return `
+        <h2>Join The Wed Tale.</h2>
+
+        <p class="auth-subtitle">
+            Choose how you'll use the platform.
+        </p>
+
+        <form onsubmit="handleSignup(event)">
+
+            <input
+                type="text"
+                id="signupName"
+                placeholder="Full name"
+                required
+            >
+
+            <input
+                type="email"
+                id="signupEmail"
+                placeholder="Email address"
+                required
+            >
+
+            <input
+                type="password"
+                id="signupPassword"
+                placeholder="Password"
+                minlength="6"
+                required
+            >
+
+            <select id="signupAccountType">
+                <option value="viewer"
+                    ${accountType === "viewer" ? "selected" : ""}>
+                    Wedding Guest / Couple
+                </option>
+
+                <option value="vendor"
+                    ${accountType === "vendor" ? "selected" : ""}>
+                    Wedding Vendor
+                </option>
+            </select>
+
+            <button
+                type="submit"
+                class="dark-btn full"
+                id="signupSubmitBtn">
+                Create Account
+            </button>
+
+        </form>
+
+        <p class="auth-switch">
+            Already have an account?
+            <button onclick="openAuth('login')">
+                Login
+            </button>
+        </p>
+    `;
+}
+
+
+function loginHTML() {
+    return `
+        <h2>Welcome back.</h2>
+
+        <p class="auth-subtitle">
+            Login to continue to The Wed Tale.
+        </p>
+
+        <form onsubmit="handleLogin(event)">
+
+            <input
+                type="email"
+                id="loginEmail"
+                placeholder="Email address"
+                required
+            >
+
+            <input
+                type="password"
+                id="loginPassword"
+                placeholder="Password"
+                required
+            >
+
+            <button
+                type="submit"
+                class="dark-btn full"
+                id="loginSubmitBtn">
+                Login
+            </button>
+
+        </form>
+
+        <p class="auth-switch">
+            Don't have an account?
+            <button onclick="openAuth('signup')">
+                Create one
+            </button>
+        </p>
+    `;
+}
+
+
+/* =========================================================
+   SIGNUP
+   ========================================================= */
+
+async function handleSignup(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("signupName")?.value.trim();
+    const email = document.getElementById("signupEmail")?.value.trim();
+    const password = document.getElementById("signupPassword")?.value;
+    const accountType =
+        document.getElementById("signupAccountType")?.value || "viewer";
+
+    const button = document.getElementById("signupSubmitBtn");
+
+    if (!name || !email || !password) {
+        showToast("Please fill all fields.");
+        return;
+    }
+
+    if (password.length < 6) {
+        showToast("Password must be at least 6 characters.");
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Creating...";
+    }
+
+    try {
+        const {
+            data,
+            error
+        } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    full_name: name,
+                    account_type: accountType
+                }
+            }
+        });
+
+        if (error) {
+            console.error(error);
+            showToast(error.message);
+            return;
+        }
+
+        /*
+         * Supabase may require email confirmation.
+         * If confirmation is enabled, session can be null here.
+         */
+
+        if (data.user) {
+            const { error: profileError } = await supabaseClient
+                .from("profiles")
+                .upsert({
+                    id: data.user.id,
+                    full_name: name,
+                    email: email,
+                    account_type: accountType
+                });
+
+            if (profileError) {
+                console.error("Profile creation error:", profileError);
+            }
+        }
+
+        closeModal("authModal");
+
+        if (data.session) {
+            currentUser = data.user;
+            await loadCurrentProfile();
+            updateNavigation();
+
+            showToast("Account created successfully.");
+
+            if (accountType === "vendor") {
+                showPage("dashboard");
+            }
+        } else {
+            showToast(
+                "Account created. Please check your email and confirm your account."
+            );
+        }
+
+    } catch (error) {
+        console.error(error);
+        showToast("Something went wrong.");
+
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Create Account";
+        }
+    }
+}
+
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+async function handleLogin(event) {
+    event.preventDefault();
+
+    const email = document.getElementById("loginEmail")?.value.trim();
+    const password = document.getElementById("loginPassword")?.value;
+
+    const button = document.getElementById("loginSubmitBtn");
+
+    if (!email || !password) {
+        showToast("Enter your email and password.");
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Logging in...";
+    }
+
+    try {
+        const {
+            data,
+            error
+        } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            console.error(error);
+            showToast(error.message);
+            return;
+        }
+
+        currentUser = data.user;
+
+        await loadCurrentProfile();
+        updateNavigation();
+        closeModal("authModal");
+
+        showToast("Welcome back.");
+
+        showPage("dashboard");
+
+    } catch (error) {
+        console.error(error);
+        showToast("Login failed.");
+
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Login";
+        }
+    }
+}
+
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+async function logout() {
+    try {
+        await supabaseClient.auth.signOut();
+
+        currentUser = null;
+        currentProfile = null;
+
+        updateNavigation();
+
+        showToast("Logged out.");
+
+        showPage("home");
+
+    } catch (error) {
+        console.error(error);
+        showToast("Could not log out.");
+    }
+}
+
+
+/* =========================================================
+   MODALS
+   ========================================================= */
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+
+    if (modal) {
+        modal.classList.remove("open");
+    }
+}
+
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+let toastTimer;
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+
+    if (!toast) {
+        alert(message);
+        return;
+    }
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 3500);
+}
+
+
+/* =========================================================
+   CATEGORY UI
+   ========================================================= */
+
+function setupCategoryUI() {
+    const filter = document.getElementById("categoryFilter");
+
+    if (filter) {
+        filter.innerHTML =
+            `<option value="">All Categories</option>` +
+            categories.map(category => `
+                <option value="${escapeHTML(category)}">
+                    ${escapeHTML(category)}
+                </option>
+            `).join("");
+    }
+
+    renderCategoriesPage();
+}
+
+
+function renderCategoriesPage() {
+    const container = document.getElementById("allCategories");
+
+    if (!container) return;
+
+    container.innerHTML = categories.map((category, index) => `
+        <div
+            class="category-card"
+            onclick="filterByCategory('${escapeJS(category)}')"
+        >
+            <span class="category-number">
+                ${String(index + 1).padStart(2, "0")}
+            </span>
+
+            <h3>${escapeHTML(category)}</h3>
+
+            <p>
+                Explore ${escapeHTML(category.toLowerCase())}
+                across Gujarat.
+            </p>
+        </div>
+    `).join("");
+}
+
+
+function filterByCategory(category) {
+    showPage("vendors");
+
+    const filter = document.getElementById("categoryFilter");
+
+    if (filter) {
+        filter.value = category;
+    }
+
+    filterVendors();
+}
+
+
+/* =========================================================
+   LOAD VENDORS
+   ========================================================= */
+
+async function loadVendors() {
+    try {
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("vendors")
+            .select("*")
+            .eq("is_approved", true)
+            .order("created_at", {
+                ascending: false
+            });
+
+        if (error) {
+            console.error("Vendor loading error:", error);
+            return;
+        }
+
+        allVendors = data || [];
+
+        renderVendorGrid(allVendors);
+        renderFeaturedVendors(allVendors);
+        populateCityFilter(allVendors);
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+
+/* =========================================================
+   CITY FILTER
+   ========================================================= */
+
+function populateCityFilter(vendors) {
+    const select = document.getElementById("cityFilter");
+
+    if (!select) return;
+
+    const uniqueCities = [
+        ...new Set(
+            vendors
+                .map(v => v.city)
+                .filter(Boolean)
+        )
+    ].sort();
+
+    select.innerHTML = `
+        <option value="">All Cities</option>
+        ${uniqueCities.map(city => `
+            <option value="${escapeHTML(city)}">
+                ${escapeHTML(city)}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+/* =========================================================
+   VENDOR FILTER
+   ========================================================= */
+
+function filterVendors() {
+    const search =
+        document.getElementById("vendorSearch")?.value
+            .toLowerCase()
+            .trim() || "";
+
+    const category =
+        document.getElementById("categoryFilter")?.value || "";
+
+    const city =
+        document.getElementById("cityFilter")?.value || "";
+
+    const filtered = allVendors.filter(vendor => {
+
+        const searchable = [
+            vendor.business_name,
+            vendor.category,
+            vendor.city,
+            vendor.description
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+        const matchesSearch =
+            !search || searchable.includes(search);
+
+        const matchesCategory =
+            !category || vendor.category === category;
+
+        const matchesCity =
+            !city || vendor.city === city;
+
+        return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesCity
+        );
+    });
+
+    renderVendorGrid(filtered);
+}
+
+
+/* =========================================================
+   VENDOR GRID
+   ========================================================= */
+
+function renderVendorGrid(vendors) {
+    const grid = document.getElementById("vendorGrid");
+
+    if (!grid) return;
+
+    const count = document.getElementById("resultCount");
+
+    if (count) {
+        count.textContent =
+            `${vendors.length} vendor${vendors.length === 1 ? "" : "s"}`;
+    }
+
+    if (!vendors.length) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <h3>No vendors found.</h3>
+                <p>
+                    Try another search, category or city.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = vendors.map(createVendorCard).join("");
+}
+
+
+function renderFeaturedVendors(vendors) {
+    const container = document.getElementById("featuredVendors");
+
+    if (!container) return;
+
+    const featured = vendors.slice(0, 6);
+
+    if (!featured.length) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>
+                    Featured vendors will appear here soon.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML =
+        featured.map(createVendorCard).join("");
+}
+
+
+function createVendorCard(vendor) {
+    const image = vendor.cover_image;
+
+    return `
+        <article
+            class="vendor-card"
+            onclick="openVendorProfile('${escapeJS(vendor.id)}')"
+        >
+
+            <div class="vendor-card-image">
+                ${
+                    image
+                        ? `<img
+                            src="${escapeHTML(image)}"
+                            alt="${escapeHTML(vendor.business_name || "Vendor")}"
+                            loading="lazy"
+                        >`
+                        : `
+                            <div class="image-placeholder">
+                                THE WED TALE
+                            </div>
+                        `
+                }
+            </div>
+
+            <div class="vendor-card-content">
+
+                <p class="vendor-category">
+                    ${escapeHTML(vendor.category || "Wedding Vendor")}
+                </p>
+
+                <h3>
+                    ${escapeHTML(vendor.business_name || "Untitled Vendor")}
+                </h3>
+
+                <p class="vendor-location">
+                    ${escapeHTML(vendor.city || "Gujarat")}
+                </p>
+
+                ${
+                    vendor.starting_price
+                        ? `
+                            <p class="vendor-price">
+                                Starting from ${escapeHTML(
+                                    formatPrice(vendor.starting_price)
+                                )}
+                            </p>
+                        `
+                        : ""
+                }
+
+            </div>
+        </article>
+    `;
+}
+
+
+/* =========================================================
+   HOME
+   ========================================================= */
+
+function renderHome() {
+    const container =
+        document.getElementById("homeCategories");
+
+    if (container) {
+        container.innerHTML = categories
+            .map((category, index) => `
+                <div
+                    class="category-card"
+                    onclick="filterByCategory('${escapeJS(category)}')"
+                >
+                    <span class="category-number">
+                        ${String(index + 1).padStart(2, "0")}
+                    </span>
+
+                    <h3>
+                        ${escapeHTML(category)}
+                    </h3>
+
+                    <p>
+                        Discover trusted professionals.
+                    </p>
+                </div>
+            `)
+            .join("");
+    }
+
+    renderFeaturedVendors(allVendors);
+}
+
+
+function homeSearchKey(event) {
+    if (event.key === "Enter") {
+        searchFromHome();
+    }
+}
+
+
+function searchFromHome() {
+    const value =
+        document.getElementById("homeSearch")?.value
+            .trim() || "";
+
+    showPage("vendors");
+
+    const searchInput =
+        document.getElementById("vendorSearch");
+
+    if (searchInput) {
+        searchInput.value = value;
+    }
+
+    filterVendors();
+}
+
+
+/* =========================================================
+   VENDOR PROFILE
+   ========================================================= */
+
+async function openVendorProfile(vendorId) {
+    showPage("profile");
+
+    const container =
+        document.getElementById("profileContent");
+
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="loading-state">
+            Loading vendor...
+        </div>
+    `;
+
+    try {
+        const {
+            data: vendor,
+            error
+        } = await supabaseClient
+            .from("vendors")
+            .select("*")
+            .eq("id", vendorId)
+            .single();
+
+        if (error) {
+            console.error(error);
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h2>Vendor not found.</h2>
+                    <button
+                        class="dark-btn"
+                        onclick="showPage('vendors')">
+                        Back to vendors
+                    </button>
+                </div>
+            `;
+
+            return;
+        }
+
+        currentVendor = vendor;
+
+        await renderVendorProfile(vendor);
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+
+async function renderVendorProfile(vendor) {
+    const container =
+        document.getElementById("profileContent");
+
+    if (!container) return;
+
+    /* =====================================================
+       IMPORTANT:
+       Portfolio images come ONLY from vendor_images.
+       cover_image is used ONLY for the banner.
+       ===================================================== */
+
+    const {
+        data: portfolio,
+        error
+    } = await supabaseClient
+        .from("vendor_images")
+        .select("*")
+        .eq("vendor_id", vendor.id)
+        .order("created_at", {
+            ascending: false
+        });
+
+    if (error) {
+        console.error("Portfolio loading error:", error);
+    }
+
+    const portfolioImages = portfolio || [];
+
+    const isFavourite =
+        currentUser
+            ? await checkFavourite(vendor.id)
+            : false;
+
+    container.innerHTML = `
+
+        <div class="profile-back">
+            <button
+                class="arrow-btn"
+                onclick="showPage('vendors')">
+                ← Back to vendors
+            </button>
+        </div>
+
+        <div class="vendor-profile">
+
+            <div class="profile-cover">
+
+                ${
+                    vendor.cover_image
+                        ? `
+                            <img
+                                src="${escapeHTML(vendor.cover_image)}"
+                                alt="${escapeHTML(vendor.business_name)}"
+                            >
+                        `
+                        : `
+                            <div class="profile-cover-placeholder">
+                                THE WED TALE
+                            </div>
+                        `
+                }
+
+            </div>
+
+            <div class="profile-info">
+
+                <p class="eyebrow">
+                    ${escapeHTML(vendor.category || "WEDDING VENDOR")}
+                </p>
+
+                <h1>
+                    ${escapeHTML(vendor.business_name || "")}
+                </h1>
+
+                <p class="profile-location">
+                    ${escapeHTML(vendor.city || "Gujarat")}
+                </p>
+
+                <p class="profile-description">
+                    ${escapeHTML(
+                        vendor.description ||
+                        "A wedding professional listed on The Wed Tale Gujarat."
+                    )}
+                </p>
+
+                <div class="profile-details">
+
+                    ${
+                        vendor.starting_price
+                            ? `
+                                <div>
+                                    <span>Starting price</span>
+                                    <strong>
+                                        ${escapeHTML(
+                                            formatPrice(
+                                                vendor.starting_price
+                                            )
+                                        )}
+                                    </strong>
+                                </div>
+                            `
+                            : ""
+                    }
+
+                    <div>
+                        <span>Location</span>
+                        <strong>
+                            ${escapeHTML(vendor.city || "Gujarat")}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="profile-actions">
+
+                    ${
+                        vendor.phone || vendor.whatsapp
+                            ? `
+                                <button
+                                    class="dark-btn"
+                                    onclick="contactVendor('${escapeJS(vendor.id)}')">
+                                    Contact Vendor
+                                </button>
+                            `
+                            : ""
+                    }
+
+                    <button
+                        class="outline-btn"
+                        onclick="toggleFavourite('${escapeJS(vendor.id)}')">
+
+                        ${isFavourite ? "♥ Saved" : "♡ Save Vendor"}
+
+                    </button>
+
+                    ${
+                        vendor.instagram
+                            ? `
+                                <button
+                                    class="outline-btn"
+                                    onclick="openExternal('${escapeJS(normalizeUrl(vendor.instagram))}')">
+                                    Instagram
+                                </button>
+                            `
+                            : ""
+                    }
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =================================================
+             PORTFOLIO
+             ================================================= -->
+
+        <section class="profile-portfolio">
+
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">
+                        WORK
+                    </p>
+
+                    <h2>
+                        Portfolio
+                    </h2>
+                </div>
+            </div>
+
+            ${
+                portfolioImages.length
+                    ? `
+                        <div class="portfolio-grid">
+
+                            ${portfolioImages.map(image => `
+                                <div class="portfolio-item">
+
+                                    <img
+                                        src="${escapeHTML(image.image_url)}"
+                                        alt="${escapeHTML(vendor.business_name || "Portfolio image")}"
+                                        loading="lazy"
+                                    >
+
+                                </div>
+                            `).join("")}
+
+                        </div>
+                    `
+                    : `
+                        <div class="empty-state">
+                            <p>
+                                Portfolio images will appear here.
+                            </p>
+                        </div>
+                    `
+            }
+
+        </section>
+    `;
+}
+
+
+/* =========================================================
+   CONTACT VENDOR
+   ========================================================= */
+
+async function contactVendor(vendorId) {
+    const vendor =
+        allVendors.find(v => v.id === vendorId);
+
+    if (!vendor) {
+        const {
+            data
+        } = await supabaseClient
+            .from("vendors")
+            .select("*")
+            .eq("id", vendorId)
+            .single();
+
+        if (data) {
+            contactVendorData(data);
+        }
+
+        return;
+    }
+
+    contactVendorData(vendor);
+}
+
+
+function contactVendorData(vendor) {
+    if (vendor.whatsapp) {
+        const number =
+            String(vendor.whatsapp)
+                .replace(/[^\d]/g, "");
+
+        if (number) {
+            openExternal(`https://wa.me/${number}`);
+            return;
+        }
+    }
+
+    if (vendor.phone) {
+        window.location.href =
+            `tel:${vendor.phone}`;
+        return;
+    }
+
+    showToast("Contact details are not available.");
+}
+
+
+/* =========================================================
+   FAVOURITES
+   ========================================================= */
+
+async function checkFavourite(vendorId) {
+    if (!currentUser) return false;
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("favourites")
+        .select("id")
+        .eq("user_id", currentUser.id)
+        .eq("vendor_id", vendorId)
+        .maybeSingle();
+
+    if (error) {
+        console.error(error);
+        return false;
+    }
+
+    return !!data;
+}
+
+
+async function toggleFavourite(vendorId) {
+    if (!currentUser) {
+        openAuth("login");
+        showToast("Please login to save vendors.");
+        return;
+    }
+
+    const existing = await checkFavourite(vendorId);
+
+    if (existing) {
+        const {
+            error
+        } = await supabaseClient
+            .from("favourites")
+            .delete()
+            .eq("user_id", currentUser.id)
+            .eq("vendor_id", vendorId);
+
+        if (error) {
+            console.error(error);
+            showToast("Could not remove favourite.");
+            return;
+        }
+
+        showToast("Removed from favourites.");
+
+    } else {
+        const {
+            error
+        } = await supabaseClient
+            .from("favourites")
+            .insert({
+                user_id: currentUser.id,
+                vendor_id: vendorId
+            });
+
+        if (error) {
+            console.error(error);
+            showToast("Could not save vendor.");
+            return;
+        }
+
+        showToast("Vendor saved.");
+    }
+
+    if (currentVendor) {
+        await renderVendorProfile(currentVendor);
+    }
+}
+
+
+async function renderFavorites() {
+    const grid =
+        document.getElementById("favoritesGrid");
+
+    if (!grid) return;
+
+    if (!currentUser) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <h3>Login to see your favourites.</h3>
+
+                <button
+                    class="dark-btn"
+                    onclick="openAuth('login')">
+                    Login
+                </button>
+            </div>
+        `;
+
+        return;
+    }
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("favourites")
+        .select(`
+            id,
+            vendor_id,
+            vendors (*)
+        `)
+        .eq("user_id", currentUser.id)
+        .order("created_at", {
+            ascending: false
+        });
+
+    if (error) {
+        console.error(error);
+
+        grid.innerHTML = `
+            <div class="empty-state">
+                <p>Could not load favourites.</p>
+            </div>
+        `;
+
+        return;
+    }
+
+    const vendors =
+        (data || [])
+            .map(item => item.vendors)
+            .filter(Boolean);
+
+    if (!vendors.length) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <h3>No saved vendors yet.</h3>
+                <p>
+                    Save vendors while exploring.
+                </p>
+            </div>
+        `;
+
+        return;
+    }
+
+    grid.innerHTML =
+        vendors.map(createVendorCard).join("");
+}
+
+
+/* =========================================================
+   DASHBOARD
+   ========================================================= */
+
+async function renderDashboard() {
+    const container =
+        document.getElementById("dashboardContent");
+
+    if (!container) return;
+
+    if (!currentUser) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h2>Login required.</h2>
+                <p>
+                    Login to access your dashboard.
+                </p>
+
+                <button
+                    class="dark-btn"
+                    onclick="openAuth('login')">
+                    Login
+                </button>
+            </div>
+        `;
+
+        return;
+    }
+
+    await loadCurrentProfile();
+
+    const {
+        data: vendor,
+        error
+    } = await supabaseClient
+        .from("vendors")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error(error);
+    }
+
+    currentVendor = vendor || null;
+
+    container.innerHTML = dashboardHTML(vendor);
+
+    await loadDashboardPortfolio(vendor);
+}
+
+
+/* =========================================================
+   DASHBOARD HTML
+   ========================================================= */
+
+function dashboardHTML(vendor) {
+    return `
+
+        <div class="page-header">
+            <p class="eyebrow">
+                VENDOR DASHBOARD
+            </p>
+
+            <h1>
+                ${
+                    vendor
+                        ? "Manage your business."
+                        : "List your business."
+                }
+            </h1>
+
+            <p>
+                Add your business details and showcase
+                your work to couples across Gujarat.
+            </p>
+        </div>
+
+        <div class="dashboard-wrapper">
+
+            <form
+                id="vendorForm"
+                onsubmit="saveVendor(event)"
+            >
+
+                <input
+                    type="hidden"
+                    id="vendorId"
+                    value="${vendor?.id || ""}"
+                >
+
+                <!-- BUSINESS INFORMATION -->
+
+                <div class="dashboard-card">
+
+                    <h2>
+                        Business information
+                    </h2>
+
+                    <label>
+                        Business name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="businessName"
+                        placeholder="e.g. Azura Lakeside"
+                        value="${escapeHTML(vendor?.business_name || "")}"
+                        required
+                    >
+
+                    <label>
+                        Category
+                    </label>
+
+                    <select id="businessCategory" required>
+
+                        <option value="">
+                            Select category
+                        </option>
+
+                        ${categories.map(category => `
+                            <option
+                                value="${escapeHTML(category)}"
+                                ${
+                                    vendor?.category === category
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${escapeHTML(category)}
+                            </option>
+                        `).join("")}
+
+                    </select>
+
+                    <label>
+                        City
+                    </label>
+
+                    <select id="businessCity" required>
+
+                        <option value="">
+                            Select city
+                        </option>
+
+                        ${cities.map(city => `
+                            <option
+                                value="${escapeHTML(city)}"
+                                ${
+                                    vendor?.city === city
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${escapeHTML(city)}
+                            </option>
+                        `).join("")}
+
+                    </select>
+
+                    <label>
+                        Description
+                    </label>
+
+                    <textarea
+                        id="businessDescription"
+                        rows="5"
+                        placeholder="Tell couples about your business..."
+                    >${escapeHTML(vendor?.description || "")}</textarea>
+
+                    <label>
+                        Starting price
+                    </label>
+
+                    <input
+                        type="text"
+                        id="startingPrice"
+                        placeholder="e.g. ₹25,000 onwards"
+                        value="${escapeHTML(vendor?.starting_price || "")}"
+                    >
+
+                </div>
+
+
+                <!-- CONTACT -->
+
+                <div class="dashboard-card">
+
+                    <h2>
+                        Contact details
+                    </h2>
+
+                    <label>
+                        Phone
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="businessPhone"
+                        placeholder="+91..."
+                        value="${escapeHTML(vendor?.phone || "")}"
+                    >
+
+                    <label>
+                        WhatsApp
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="businessWhatsapp"
+                        placeholder="+91..."
+                        value="${escapeHTML(vendor?.whatsapp || "")}"
+                    >
+
+                    <label>
+                        Instagram
+                    </label>
+
+                    <input
+                        type="text"
+                        id="businessInstagram"
+                        placeholder="@yourbusiness"
+                        value="${escapeHTML(vendor?.instagram || "")}"
+                    >
+
+                    <label>
+                        Website
+                    </label>
+
+                    <input
+                        type="text"
+                        id="businessWebsite"
+                        placeholder="https://..."
+                        value="${escapeHTML(vendor?.website || "")}"
+                    >
+
+                </div>
+
+
+                <!-- =================================================
+                     COVER IMAGE
+                     =================================================
+
+                     THIS IMAGE IS ONLY THE PROFILE BANNER.
+
+                     IMPORTANT:
+                     It is uploaded to vendors.cover_image.
+
+                     It is NEVER inserted into vendor_images.
+                     ================================================= -->
+
+                <div class="dashboard-card">
+
+                    <h2>
+                        Cover image
+                    </h2>
+
+                    <p class="form-help">
+                        This image will appear as the main banner
+                        on your vendor profile.
+                    </p>
+
+                    ${
+                        vendor?.cover_image
+                            ? `
+                                <div class="current-cover-preview">
+
+                                    <img
+                                        src="${escapeHTML(vendor.cover_image)}"
+                                        alt="Current cover image"
+                                    >
+
+                                </div>
+                            `
+                            : ""
+                    }
+
+                    <label>
+                        Upload cover image
+                    </label>
+
+                    <input
+                        type="file"
+                        id="coverImage"
+                        accept="image/*"
+                    >
+
+                    <p class="form-help">
+                        Upload one main image for your profile banner.
+                    </p>
+
+                </div>
+
+
+                <!-- =================================================
+                     PORTFOLIO IMAGES
+                     =================================================
+
+                     THESE ARE COMPLETELY SEPARATE FROM THE COVER.
+
+                     They go into:
+                     vendor_images.image_url
+
+                     They NEVER update:
+                     vendors.cover_image
+                     ================================================= -->
+
+                <div class="dashboard-card">
+
+                    <h2>
+                        Portfolio
+                    </h2>
+
+                    <p class="form-help">
+                        Upload photos of your work.
+                        These will appear only in your portfolio.
+                    </p>
+
+                    <label>
+                        Add portfolio images
+                    </label>
+
+                    <input
+                        type="file"
+                        id="portfolioImages"
+                        accept="image/*"
+                        multiple
+                    >
+
+                    <p class="form-help">
+                        You can select multiple images at once.
+                    </p>
+
+                    <div
+                        id="dashboardPortfolio"
+                        class="dashboard-portfolio-grid">
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="dark-btn full"
+                    id="saveVendorButton"
+                >
+                    ${
+                        vendor
+                            ? "Save Changes"
+                            : "Create Business Listing"
+                    }
+                </button>
+
+            </form>
+
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   SAVE VENDOR
+   ========================================================= */
+
+async function saveVendor(event) {
+    event.preventDefault();
+
+    if (!currentUser) {
+        showToast("Please login first.");
+        return;
+    }
+
+    const button =
+        document.getElementById("saveVendorButton");
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Saving...";
+    }
+
+    try {
+
+        /* =====================================================
+           BASIC DATA
+           ===================================================== */
+
+        const vendorId =
+            document.getElementById("vendorId")?.value || null;
+
+        const businessName =
+            document.getElementById("businessName")?.value.trim();
+
+        const category =
+            document.getElementById("businessCategory")?.value;
+
+        const city =
+            document.getElementById("businessCity")?.value;
+
+        const description =
+            document.getElementById("businessDescription")?.value.trim();
+
+        const startingPrice =
+            document.getElementById("startingPrice")?.value.trim();
+
+        const phone =
+            document.getElementById("businessPhone")?.value.trim();
+
+        const whatsapp =
+            document.getElementById("businessWhatsapp")?.value.trim();
+
+        const instagram =
+            document.getElementById("businessInstagram")?.value.trim();
+
+        const website =
+            document.getElementById("businessWebsite")?.value.trim();
+
+        if (!businessName || !category || !city) {
+            showToast(
+                "Business name, category and city are required."
+            );
+
+            return;
+        }
+
+
+        /* =====================================================
+           EXISTING VENDOR
+           ===================================================== */
+
+        let existingVendor = null;
+
+        if (vendorId) {
+            const {
+                data
+            } = await supabaseClient
+                .from("vendors")
+                .select("*")
+                .eq("id", vendorId)
+                .eq("user_id", currentUser.id)
+                .single();
+
+            existingVendor = data;
+        } else {
+            const {
+                data
+            } = await supabaseClient
+                .from("vendors")
+                .select("*")
+                .eq("user_id", currentUser.id)
+                .maybeSingle();
+
+            existingVendor = data;
+        }
+
+
+        /* =====================================================
+           COVER IMAGE
+           ===================================================== */
+
+        let coverImageUrl =
+            existingVendor?.cover_image || null;
+
+        const coverFile =
+            document.getElementById("coverImage")?.files?.[0];
+
+        /*
+         * IMPORTANT:
+         *
+         * Only this section can update cover_image.
+         *
+         * Portfolio upload NEVER reaches this variable.
+         */
+
+        if (coverFile) {
+
+            coverImageUrl =
+                await uploadImage(
+                    coverFile,
+                    currentUser.id,
+                    "covers"
+                );
+
+            if (!coverImageUrl) {
+                showToast("Cover image upload failed.");
+                return;
+            }
+        }
+
+
+        /* =====================================================
+           SAVE VENDOR
+           ===================================================== */
+
+        const vendorData = {
+            user_id: currentUser.id,
+            business_name: businessName,
+            category: category,
+            city: city,
+            description: description,
+            phone: phone,
+            whatsapp: whatsapp,
+            instagram: instagram,
+            website: website,
+            starting_price: startingPrice,
+            cover_image: coverImageUrl,
+            is_approved: existingVendor?.is_approved ?? true,
+            updated_at: new Date().toISOString()
+        };
+
+        let savedVendor;
+
+        if (existingVendor) {
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("vendors")
+                .update(vendorData)
+                .eq("id", existingVendor.id)
+                .eq("user_id", currentUser.id)
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            savedVendor = data;
+
+        } else {
+
+            const {
+                data,
+                error
+            } = await supabaseClient
+                .from("vendors")
+                .insert(vendorData)
+                .select()
+                .single();
+
+            if (error) {
+                throw error;
+            }
+
+            savedVendor = data;
+        }
+
+
+        /* =====================================================
+           PORTFOLIO UPLOAD
+           =====================================================
+
+           NOTICE:
+
+           We do NOT modify savedVendor.cover_image here.
+
+           Every portfolio image gets its own
+           vendor_images record.
+           ===================================================== */
+
+        const portfolioFiles =
+            Array.from(
+                document.getElementById("portfolioImages")
+                    ?.files || []
+            );
+
+        if (portfolioFiles.length) {
+
+            for (const file of portfolioFiles) {
+
+                const imageUrl =
+                    await uploadImage(
+                        file,
+                        currentUser.id,
+                        "portfolio"
+                    );
+
+                if (!imageUrl) {
+                    console.error(
+                        "Portfolio image upload failed:",
+                        file.name
+                    );
+
+                    continue;
+                }
+
+                const {
+                    error
+                } = await supabaseClient
+                    .from("vendor_images")
+                    .insert({
+                        vendor_id: savedVendor.id,
+                        image_url: imageUrl
+                    });
+
+                if (error) {
+                    console.error(
+                        "Portfolio database error:",
+                        error
+                    );
+                }
+            }
+        }
+
+
+        currentVendor = savedVendor;
+
+        await loadVendors();
+
+        showToast(
+            existingVendor
+                ? "Business listing updated."
+                : "Business listing created."
+        );
+
+        renderDashboard();
+
+    } catch (error) {
+
+        console.error("Save vendor error:", error);
+
+        showToast(
+            error.message ||
+            "Could not save business listing."
+        );
+
+    } finally {
+
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Save Changes";
+        }
+    }
+}
+
+
+/* =========================================================
+   IMAGE UPLOAD
+   ========================================================= */
+
+async function uploadImage(file, userId, folder) {
+
+    if (!file || !userId) {
+        return null;
+    }
+
+    try {
+
+        const safeName =
+            file.name
+                .toLowerCase()
+                .replace(/[^a-z0-9.-]/g, "-");
+
+        const extension =
+            safeName.includes(".")
+                ? safeName.split(".").pop()
+                : "jpg";
+
+        const fileName =
+            `${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 10)}.${extension}`;
+
+        const filePath =
+            `${folder}/${userId}/${fileName}`;
+
+
+        /* =====================================================
+           UPLOAD TO SUPABASE STORAGE
+           ===================================================== */
+
+        const {
+            error: uploadError
+        } = await supabaseClient.storage
+            .from(STORAGE_BUCKET)
+            .upload(
+                filePath,
+                file,
+                {
+                    cacheControl: "3600",
+                    upsert: false,
+                    contentType: file.type
+                }
+            );
+
+        if (uploadError) {
+            console.error(
+                "Storage upload error:",
+                uploadError
+            );
+
+            throw uploadError;
+        }
+
+
+        /* =====================================================
+           GET PUBLIC URL
+           ===================================================== */
+
+        const {
+            data
+        } = supabaseClient.storage
+            .from(STORAGE_BUCKET)
+            .getPublicUrl(filePath);
+
+        return data?.publicUrl || null;
+
+    } catch (error) {
+
+        console.error(
+            "uploadImage error:",
+            error
+        );
+
+        return null;
+    }
+}
+
+
+/* =========================================================
+   DASHBOARD PORTFOLIO
+   ========================================================= */
+
+async function loadDashboardPortfolio(vendor) {
+
+    const container =
+        document.getElementById("dashboardPortfolio");
+
+    if (!container) return;
+
+    if (!vendor) {
+        container.innerHTML = "";
+        return;
+    }
+
+    const {
+        data,
+        error
+    } = await supabaseClient
+        .from("vendor_images")
+        .select("*")
+        .eq("vendor_id", vendor.id)
+        .order("created_at", {
+            ascending: false
+        });
+
+    if (error) {
+        console.error(error);
+
+        container.innerHTML = `
+            <p>
+                Could not load portfolio.
+            </p>
+        `;
+
+        return;
+    }
+
+    if (!data?.length) {
+        container.innerHTML = `
+            <p class="form-help">
+                No portfolio images uploaded yet.
+            </p>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        data.map(image => `
+            <div class="dashboard-portfolio-item">
+
+                <img
+                    src="${escapeHTML(image.image_url)}"
+                    alt="Portfolio"
+                    loading="lazy"
+                >
+
+                <button
+                    type="button"
+                    class="portfolio-delete-btn"
+                    onclick="deletePortfolioImage('${escapeJS(image.id)}')">
+                    ×
+                </button>
+
+            </div>
+        `).join("");
+}
+
+
+/* =========================================================
+   DELETE PORTFOLIO IMAGE
+   ========================================================= */
+
+async function deletePortfolioImage(imageId) {
+
+    if (!currentUser) {
+        showToast("Please login first.");
+        return;
+    }
+
+    const confirmed =
+        confirm("Delete this portfolio image?");
+
+    if (!confirmed) return;
+
+    try {
+
+        const {
+            data: image,
+            error: fetchError
+        } = await supabaseClient
+            .from("vendor_images")
+            .select("*")
+            .eq("id", imageId)
+            .single();
+
+        if (fetchError) {
+            throw fetchError;
+        }
+
+        const {
+            data: vendor
+        } = await supabaseClient
+            .from("vendors")
+            .select("id")
+            .eq("id", image.vendor_id)
+            .eq("user_id", currentUser.id)
+            .single();
+
+        if (!vendor) {
+            showToast("You cannot delete this image.");
+            return;
+        }
+
+
+        /* Delete database record */
+
+        const {
+            error: deleteError
+        } = await supabaseClient
+            .from("vendor_images")
+            .delete()
+            .eq("id", imageId);
+
+        if (deleteError) {
+            throw deleteError;
+        }
+
+        showToast("Portfolio image deleted.");
+
+        renderDashboard();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            "Could not delete portfolio image."
+        );
+    }
+}
+
+
+/* =========================================================
+   PROFILE / PORTFOLIO HELPERS
+   ========================================================= */
+
+function formatPrice(price) {
+
+    if (!price) return "";
+
+    const value = String(price).trim();
+
+    if (
+        value.includes("₹") ||
+        value.toLowerCase().includes("starting") ||
+        value.toLowerCase().includes("onwards")
+    ) {
+        return value;
+    }
+
+    return `₹${value}`;
+}
+
+
+/* =========================================================
+   EXTERNAL LINKS
+   ========================================================= */
+
+function normalizeUrl(url) {
+
+    if (!url) return "";
+
+    url = url.trim();
+
+    if (!url) return "";
+
+    if (
+        url.startsWith("http://") ||
+        url.startsWith("https://")
+    ) {
+        return url;
+    }
+
+    if (url.startsWith("@")) {
+        return `https://instagram.com/${url.substring(1)}`;
+    }
+
+    if (url.includes("instagram.com")) {
+        return `https://${url}`;
+    }
+
+    return `https://${url}`;
+}
+
+
+function openExternal(url) {
+
+    if (!url) return;
+
+    window.open(
+        url,
+        "_blank",
+        "noopener,noreferrer"
+    );
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+function searchVendors(value) {
+
+    const input =
+        document.getElementById("vendorSearch");
+
+    if (input) {
+        input.value = value;
+    }
+
+    showPage("vendors");
+
+    filterVendors();
+}
+
+
+/* =========================================================
+   HTML SAFETY
+   ========================================================= */
 
 function escapeHTML(value) {
 
@@ -265,3882 +2373,128 @@ function escapeHTML(value) {
     }
 
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
-function showToast(message) {
+function escapeJS(value) {
 
-    const toast =
-        document.getElementById("toast");
-
-    if (!toast) {
-        alert(message);
-        return;
+    if (value === null || value === undefined) {
+        return "";
     }
 
-    toast.textContent = message;
-
-    toast.classList.add("show");
-
-    setTimeout(() => {
-
-        toast.classList.remove("show");
-
-    }, 2800);
-}
-
-
-function generateId(prefix = "id") {
-
-    return (
-        prefix +
-        "-" +
-        Date.now() +
-        "-" +
-        Math.random()
-            .toString(36)
-            .substring(2, 9)
-    );
-}
-
-
-function formatPrice(value) {
-
-    if (
-        value === null ||
-        value === undefined ||
-        value === ""
-    ) {
-        return "Price on request";
-    }
-
-    const number =
-        Number(value);
-
-    if (Number.isNaN(number)) {
-        return String(value);
-    }
-
-    return (
-        "₹" +
-        number.toLocaleString("en-IN") +
-        " onwards"
-    );
+    return String(value)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r");
 }
 
 
 /* =========================================================
-   ERROR HANDLER
-========================================================= */
-
-function handleSupabaseError(error, fallbackMessage) {
-
-    console.error(
-        "Supabase error:",
-        error
-    );
-
-    showToast(
-        error?.message ||
-        fallbackMessage ||
-        "Something went wrong."
-    );
-}
-
-
-/* =========================================================
-   PROFILE
-========================================================= */
-
-async function loadCurrentProfile() {
-
-    if (!currentUser) {
-
-        currentProfile = null;
-
-        return null;
-    }
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("profiles")
-        .select("*")
-        .eq("id", currentUser.id)
-        .maybeSingle();
-
-
-    if (error) {
-
-        console.error(
-            "Profile loading error:",
-            error
-        );
-
-        currentProfile = null;
-
-        return null;
-    }
-
-
-    currentProfile = data;
-
-    return data;
-}
-
-
-async function ensureCurrentProfile() {
-
-    if (!currentUser) {
-        return null;
-    }
-
-
-    let profile =
-        await loadCurrentProfile();
-
-
-    if (profile) {
-        return profile;
-    }
-
-
-    const metadata =
-        currentUser.user_metadata || {};
-
-
-    const name =
-        metadata.full_name ||
-        metadata.name ||
-        currentUser.email
-            ?.split("@")[0] ||
-        "User";
-
-
-    const role =
-        metadata.account_type === "vendor"
-            ? "vendor"
-            : "viewer";
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("profiles")
-        .insert({
-            id: currentUser.id,
-            full_name: name,
-            email: currentUser.email,
-            account_type: role
-        })
-        .select()
-        .single();
-
-
-    if (error) {
-
-        console.error(
-            "Profile creation error:",
-            error
-        );
-
-        return null;
-    }
-
-
-    currentProfile = data;
-
-    return data;
-}
-
-
-/* =========================================================
-   AUTH STATE
-========================================================= */
-
-async function loadAuthState() {
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .auth
-        .getSession();
-
-
-    if (error) {
-
-        console.error(
-            "Session error:",
-            error
-        );
-
-        return;
-    }
-
-
-    currentUser =
-        data.session?.user || null;
-
-
-    if (currentUser) {
-
-        await ensureCurrentProfile();
-
-    } else {
-
-        currentProfile = null;
-    }
-
-
-    updateNavigation();
-}
-
-
-/* =========================================================
-   AUTH STATE LISTENER
-========================================================= */
-
-supabaseClient
-    .auth
-    .onAuthStateChange(
-        (event, session) => {
-
-            currentUser =
-                session?.user || null;
-
-            /*
-             * Delay database work slightly so that
-             * Supabase finishes its auth state update.
-             */
-            setTimeout(async () => {
-
-                if (currentUser) {
-
-                    await ensureCurrentProfile();
-
-                } else {
-
-                    currentProfile = null;
-                }
-
-                updateNavigation();
-
-            }, 0);
-
-        }
-    );
-
-
-/* =========================================================
-   PAGE NAVIGATION
-========================================================= */
-
-function showPage(pageName) {
-
-    const pages =
-        document.querySelectorAll(".page");
-
-
-    pages.forEach(page => {
-
-        page.classList.remove("active");
-
-    });
-
-
-    const target =
-        document.getElementById(
-            pageName + "Page"
-        );
-
-
-    if (!target) {
-        return;
-    }
-
-
-    target.classList.add("active");
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-
-
-    if (pageName === "home") {
-
-        renderHome();
-
-    }
-
-
-    if (pageName === "vendors") {
-
-        prepareFilters();
-
-        filterVendors();
-
-    }
-
-
-    if (pageName === "categories") {
-
-        renderCategories();
-
-    }
-
-
-    if (pageName === "favorites") {
-
-        renderFavorites();
-
-    }
-
-
-    if (pageName === "dashboard") {
-
-        renderDashboard();
-
-    }
-
-
-    updateNavigation();
-}
-
-
-/* =========================================================
-   MOBILE MENU
-========================================================= */
-
-function toggleMobileMenu() {
-
-    const menu =
-        document.getElementById(
-            "mobileMenu"
-        );
-
-    if (!menu) return;
-
-    menu.classList.toggle("active");
-}
-
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-function updateNavigation() {
-
-    const actions =
-        document.getElementById(
-            "navActions"
-        );
-
-
-    if (!actions) {
-        return;
-    }
-
-
-    if (!currentUser) {
-
-        actions.innerHTML = `
-
-            <button
-                class="text-btn"
-                onclick="openAuth('login')">
-
-                Login
-
-            </button>
-
-            <button
-                class="dark-btn small"
-                onclick="openAuth('signup')">
-
-                Join
-
-            </button>
-
-        `;
-
-        return;
-    }
-
-
-    const role =
-        currentProfile?.account_type ||
-        currentUser.user_metadata?.account_type ||
-        "viewer";
-
-
-    if (role === "vendor") {
-
-        actions.innerHTML = `
-
-            <button
-                class="text-btn"
-                onclick="showPage('dashboard')">
-
-                Dashboard
-
-            </button>
-
-            <button
-                class="dark-btn small"
-                onclick="logout()">
-
-                Logout
-
-            </button>
-
-        `;
-
-    } else {
-
-        actions.innerHTML = `
-
-            <button
-                class="text-btn"
-                onclick="showPage('favorites')">
-
-                Saved
-
-            </button>
-
-            <button
-                class="dark-btn small"
-                onclick="logout()">
-
-                Logout
-
-            </button>
-
-        `;
-    }
-}
-
-
-/* =========================================================
-   HOME
-========================================================= */
-
-async function renderHome() {
-
-    renderHomeCategories();
-
-    await renderFeaturedVendors();
-
-    updateNavigation();
-}
-
-
-function renderHomeCategories() {
-
-    const container =
-        document.getElementById(
-            "homeCategories"
-        );
-
-
-    if (!container) return;
-
-
-    container.innerHTML =
-        categories
-            .slice(0, 8)
-            .map(
-                (category, index) => {
-
-                    return `
-
-                        <div
-                            class="category-card"
-                            onclick="openCategory('${escapeHTML(category.name)}')">
-
-                            <span class="category-number">
-                                ${String(index + 1).padStart(2, "0")}
-                            </span>
-
-                            <h3>
-                                ${escapeHTML(category.name)}
-                            </h3>
-
-                            <p>
-                                ${escapeHTML(category.description)}
-                            </p>
-
-                        </div>
-
-                    `;
-
-                }
-            )
-            .join("");
-}
-
-
-async function renderFeaturedVendors() {
-
-    const container =
-        document.getElementById(
-            "featuredVendors"
-        );
-
-
-    if (!container) return;
-
-
-    const vendors =
-        await fetchVendors();
-
-
-    renderVendorCards(
-        vendors.slice(0, 6),
-        container
-    );
-}
-
-
-/* =========================================================
-   FETCH VENDORS FROM SUPABASE
-========================================================= */
-
-async function fetchVendors() {
-
-    let query =
-        supabaseClient
-            .from("vendors")
-            .select("*")
-            .order(
-                "created_at",
-                {
-                    ascending: false
-                }
-            );
-
-
-    /*
-     * Visitors only see approved vendors.
-     *
-     * Logged-in vendors can also see their own
-     * listing even if it is awaiting approval.
-     */
-
-    if (currentUser) {
-
-        query =
-            query.or(
-                `is_approved.eq.true,user_id.eq.${currentUser.id}`
-            );
-
-    } else {
-
-        query =
-            query.eq(
-                "is_approved",
-                true
-            );
-    }
-
-
-    const {
-        data,
-        error
-    } = await query;
-
-
-    if (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not load vendors."
-        );
-
-        return [];
-    }
-
-
-    return data || [];
-}
-
-
-/* =========================================================
-   VENDOR CARDS
-========================================================= */
-
-async function renderVendorCards(
-    vendors,
-    container
-) {
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!vendors.length) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <h3>
-                    No vendors found.
-                </h3>
-
-                <p>
-                    Try another search or category.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    let favoriteIds = [];
-
-
-    if (currentUser) {
-
-        favoriteIds =
-            await getFavoriteIds();
-    }
-
-
-    container.innerHTML =
-        vendors
-            .map(
-                vendor => {
-
-                    const isFavorite =
-                        favoriteIds.includes(
-                            vendor.id
-                        );
-
-
-                    return `
-
-                        <article class="vendor-card">
-
-                            <div class="vendor-image">
-
-                                <img
-                                    src="${escapeHTML(
-                                        vendor.cover_image ||
-                                        "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80"
-                                    )}"
-                                    alt="${escapeHTML(vendor.business_name)}"
-                                    loading="lazy"
-                                    onerror="this.src='https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80'"
-                                >
-
-                                <button
-                                    class="favorite-btn ${isFavorite ? "active" : ""}"
-                                    onclick="toggleFavorite('${vendor.id}', event)"
-                                    aria-label="Save vendor">
-
-                                    ${isFavorite ? "♥" : "♡"}
-
-                                </button>
-
-                            </div>
-
-
-                            <div class="vendor-info">
-
-                                <span class="vendor-category">
-                                    ${escapeHTML(vendor.category)}
-                                </span>
-
-                                <h3>
-                                    ${escapeHTML(vendor.business_name)}
-                                </h3>
-
-                                <p class="vendor-location">
-                                    ${escapeHTML(vendor.city)}
-                                </p>
-
-                                <p class="vendor-price">
-                                    ${escapeHTML(
-                                        formatPrice(
-                                            vendor.starting_price
-                                        )
-                                    )}
-                                </p>
-
-                                <button
-                                    class="view-profile"
-                                    onclick="openVendor('${vendor.id}')">
-
-                                    View profile →
-
-                                </button>
-
-                            </div>
-
-                        </article>
-
-                    `;
-
-                }
-            )
-            .join("");
-}
-
-
-/* =========================================================
-   FILTERS
-========================================================= */
-
-function prepareFilters() {
-
-    const categorySelect =
-        document.getElementById(
-            "categoryFilter"
-        );
-
-    const citySelect =
-        document.getElementById(
-            "cityFilter"
-        );
-
-
-    if (categorySelect) {
-
-        const currentValue =
-            categorySelect.value;
-
-
-        categorySelect.innerHTML =
-            `<option value="">All Categories</option>` +
-            categories
-                .map(
-                    category => `
-
-                        <option value="${escapeHTML(category.name)}">
-                            ${escapeHTML(category.name)}
-                        </option>
-
-                    `
-                )
-                .join("");
-
-
-        categorySelect.value =
-            currentValue;
-    }
-
-
-    if (citySelect) {
-
-        const currentValue =
-            citySelect.value;
-
-
-        citySelect.innerHTML =
-            `<option value="">All Cities</option>` +
-            cities
-                .map(
-                    city => `
-
-                        <option value="${escapeHTML(city)}">
-                            ${escapeHTML(city)}
-                        </option>
-
-                    `
-                )
-                .join("");
-
-
-        citySelect.value =
-            currentValue;
-    }
-}
-
-
-async function filterVendors() {
-
-    const searchInput =
-        document.getElementById(
-            "vendorSearch"
-        );
-
-
-    const categorySelect =
-        document.getElementById(
-            "categoryFilter"
-        );
-
-
-    const citySelect =
-        document.getElementById(
-            "cityFilter"
-        );
-
-
-    const grid =
-        document.getElementById(
-            "vendorGrid"
-        );
-
-
-    if (!grid) {
-        return;
-    }
-
-
-    const search =
-        searchInput?.value
-            ?.toLowerCase()
-            .trim() || "";
-
-
-    const category =
-        categorySelect?.value || "";
-
-
-    const city =
-        citySelect?.value || "";
-
-
-    let vendors =
-        await fetchVendors();
-
-
-    vendors =
-        vendors.filter(
-            vendor => {
-
-                const businessName =
-                    (
-                        vendor.business_name ||
-                        ""
-                    ).toLowerCase();
-
-
-                const vendorCategory =
-                    (
-                        vendor.category ||
-                        ""
-                    ).toLowerCase();
-
-
-                const vendorCity =
-                    (
-                        vendor.city ||
-                        ""
-                    ).toLowerCase();
-
-
-                const matchesSearch =
-                    !search ||
-                    businessName.includes(search) ||
-                    vendorCategory.includes(search) ||
-                    vendorCity.includes(search);
-
-
-                const matchesCategory =
-                    !category ||
-                    vendor.category === category;
-
-
-                const matchesCity =
-                    !city ||
-                    vendor.city === city;
-
-
-                return (
-                    matchesSearch &&
-                    matchesCategory &&
-                    matchesCity
-                );
-
-            }
-        );
-
-
-    const countElement =
-        document.getElementById(
-            "resultCount"
-        );
-
-
-    if (countElement) {
-
-        countElement.textContent =
-            `${vendors.length} vendor${
-                vendors.length === 1
-                    ? ""
-                    : "s"
-            }`;
-
-    }
-
-
-    await renderVendorCards(
-        vendors,
-        grid
-    );
-}
-
-
-/* =========================================================
-   HOME SEARCH
-========================================================= */
-
-function homeSearchKey(event) {
-
-    if (
-        event.key === "Enter"
-    ) {
-
-        searchFromHome();
-
-    }
-}
-
-
-function searchFromHome() {
-
-    const input =
-        document.getElementById(
-            "homeSearch"
-        );
-
-
-    const value =
-        input?.value.trim() || "";
-
-
-    showPage("vendors");
-
-
-    const vendorSearch =
-        document.getElementById(
-            "vendorSearch"
-        );
-
-
-    if (vendorSearch) {
-
-        vendorSearch.value =
-            value;
-
-    }
-
-
-    filterVendors();
-}
-
-
-/* =========================================================
-   CATEGORIES
-========================================================= */
+   CATEGORY QUICK ACCESS
+   ========================================================= */
 
 function openCategory(category) {
-
     showPage("vendors");
 
-
     const select =
-        document.getElementById(
-            "categoryFilter"
-        );
-
+        document.getElementById("categoryFilter");
 
     if (select) {
-
-        select.value =
-            category;
-
+        select.value = category;
     }
-
 
     filterVendors();
 }
 
 
-async function renderCategories() {
-
-    const container =
-        document.getElementById(
-            "allCategories"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    const vendors =
-        await fetchVendors();
-
-
-    container.innerHTML =
-        categories
-            .map(
-                (category, index) => {
-
-                    const count =
-                        vendors.filter(
-                            vendor =>
-                                vendor.category ===
-                                category.name
-                        ).length;
-
-
-                    return `
-
-                        <div
-                            class="category-card"
-                            onclick="openCategory('${escapeHTML(category.name)}')">
-
-                            <span class="category-number">
-                                ${String(index + 1).padStart(2, "0")}
-                            </span>
-
-                            <h3>
-                                ${escapeHTML(category.name)}
-                            </h3>
-
-                            <p>
-                                ${escapeHTML(category.description)}
-                            </p>
-
-                            <p>
-                                ${count}
-                                vendor${count === 1 ? "" : "s"}
-                            </p>
-
-                        </div>
-
-                    `;
-
-                }
-            )
-            .join("");
-}
-
-
 /* =========================================================
-   FAVOURITES
-========================================================= */
+   LOADING HELPERS
+   ========================================================= */
 
-async function getFavoriteIds() {
+function showLoading(container, text = "Loading...") {
 
-    if (!currentUser) {
-        return [];
-    }
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("favourites")
-        .select("vendor_id")
-        .eq(
-            "user_id",
-            currentUser.id
-        );
-
-
-    if (error) {
-
-        console.error(
-            "Favourite loading error:",
-            error
-        );
-
-        return [];
-    }
-
-
-    return (
-        data || []
-    ).map(
-        item =>
-            item.vendor_id
-    );
-}
-
-
-async function toggleFavorite(
-    vendorId,
-    event
-) {
-
-    if (event) {
-
-        event.stopPropagation();
-
-    }
-
-
-    if (!currentUser) {
-
-        showToast(
-            "Please log in to save vendors."
-        );
-
-        openAuth("login");
-
-        return;
-    }
-
-
-    const favoriteIds =
-        await getFavoriteIds();
-
-
-    if (
-        favoriteIds.includes(
-            vendorId
-        )
-    ) {
-
-        const {
-            error
-        } = await supabaseClient
-            .from("favourites")
-            .delete()
-            .eq(
-                "user_id",
-                currentUser.id
-            )
-            .eq(
-                "vendor_id",
-                vendorId
-            );
-
-
-        if (error) {
-
-            handleSupabaseError(
-                error,
-                "Could not remove saved vendor."
-            );
-
-            return;
-        }
-
-
-        showToast(
-            "Removed from saved vendors."
-        );
-
-    } else {
-
-        const {
-            error
-        } = await supabaseClient
-            .from("favourites")
-            .insert({
-                user_id:
-                    currentUser.id,
-                vendor_id:
-                    vendorId
-            });
-
-
-        if (error) {
-
-            handleSupabaseError(
-                error,
-                "Could not save vendor."
-            );
-
-            return;
-        }
-
-
-        showToast(
-            "Vendor saved."
-        );
-    }
-
-
-    const activePage =
-        document.querySelector(
-            ".page.active"
-        );
-
-
-    if (
-        activePage?.id ===
-        "vendorsPage"
-    ) {
-
-        await filterVendors();
-
-    } else if (
-        activePage?.id ===
-        "favoritesPage"
-    ) {
-
-        await renderFavorites();
-
-    } else {
-
-        await renderHome();
-
-    }
-}
-
-
-async function renderFavorites() {
-
-    const container =
-        document.getElementById(
-            "favoritesGrid"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!currentUser) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <h3>
-                    Your saved vendors are waiting.
-                </h3>
-
-                <p>
-                    Log in to create your collection.
-                </p>
-
-                <button
-                    class="dark-btn"
-                    onclick="openAuth('login')">
-
-                    Login
-
-                </button>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    const favoriteIds =
-        await getFavoriteIds();
-
-
-    if (!favoriteIds.length) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <h3>
-                    No saved vendors yet.
-                </h3>
-
-                <p>
-                    Explore vendors and save the ones you love.
-                </p>
-
-                <button
-                    class="dark-btn"
-                    onclick="showPage('vendors')">
-
-                    Explore Vendors
-
-                </button>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("vendors")
-        .select("*")
-        .in(
-            "id",
-            favoriteIds
-        );
-
-
-    if (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not load saved vendors."
-        );
-
-        return;
-    }
-
-
-    await renderVendorCards(
-        data || [],
-        container
-    );
-}
-
-
-/* =========================================================
-   VENDOR PROFILE
-========================================================= */
-
-async function openVendor(id) {
-
-    const {
-        data: vendor,
-        error
-    } = await supabaseClient
-        .from("vendors")
-        .select("*")
-        .eq(
-            "id",
-            id
-        )
-        .single();
-
-
-    if (error || !vendor) {
-
-        handleSupabaseError(
-            error,
-            "Vendor not found."
-        );
-
-        return;
-    }
-
-
-    const container =
-        document.getElementById(
-            "profileContent"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    let isFavorite = false;
-
-
-    if (currentUser) {
-
-        const {
-            data
-        } = await supabaseClient
-            .from("favourites")
-            .select("id")
-            .eq(
-                "user_id",
-                currentUser.id
-            )
-            .eq(
-                "vendor_id",
-                vendor.id
-            )
-            .maybeSingle();
-
-
-        isFavorite =
-            !!data;
-    }
-
-
-    const {
-        data: gallery
-    } = await supabaseClient
-        .from("vendor_images")
-        .select("*")
-        .eq(
-            "vendor_id",
-            vendor.id
-        )
-        .order(
-            "created_at",
-            {
-                ascending: true
-            }
-        );
-
-
-    const galleryImages =
-        gallery || [];
-
+    if (!container) return;
 
     container.innerHTML = `
-
-        <div class="profile-wrapper">
-
-            <button
-                class="profile-back"
-                onclick="showPage('vendors')">
-
-                ← Back to vendors
-
-            </button>
-
-
-            <div class="profile-hero">
-
-                <div class="profile-main-image">
-
-                    <img
-                        src="${escapeHTML(
-                            vendor.cover_image ||
-                            "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80"
-                        )}"
-                        alt="${escapeHTML(vendor.business_name)}"
-                    >
-
-                </div>
-
-
-                <div class="profile-details">
-
-                    <span class="vendor-category">
-                        ${escapeHTML(vendor.category)}
-                    </span>
-
-                    <h1>
-                        ${escapeHTML(vendor.business_name)}
-                    </h1>
-
-                    <p class="location">
-                        ${escapeHTML(vendor.city)}, Gujarat
-                    </p>
-
-                    <p class="profile-description">
-                        ${escapeHTML(vendor.description)}
-                    </p>
-
-
-                    <div class="profile-meta">
-
-                        <div>
-
-                            <span>
-                                Starting price
-                            </span>
-
-                            <strong>
-                                ${escapeHTML(
-                                    formatPrice(
-                                        vendor.starting_price
-                                    )
-                                )}
-                            </strong>
-
-                        </div>
-
-
-                        <div>
-
-                            <span>
-                                Location
-                            </span>
-
-                            <strong>
-                                ${escapeHTML(vendor.city)}
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="profile-actions">
-
-                        <button
-                            class="dark-btn"
-                            onclick="contactVendor('${vendor.id}')">
-
-                            Contact Vendor
-
-                        </button>
-
-                        <button
-                            class="outline-btn"
-                            onclick="toggleFavorite('${vendor.id}')">
-
-                            ${
-                                isFavorite
-                                    ? "♥ Saved"
-                                    : "♡ Save Vendor"
-                            }
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            ${
-                galleryImages.length
-                    ? `
-
-                        <div class="vendor-gallery">
-
-                            <h2>
-                                Portfolio
-                            </h2>
-
-                            <div class="gallery-grid">
-
-                                ${galleryImages
-                                    .map(
-                                        image => `
-
-                                            <img
-                                                src="${escapeHTML(image.image_url)}"
-                                                alt="${escapeHTML(vendor.business_name)} portfolio image"
-                                                loading="lazy"
-                                            >
-
-                                        `
-                                    )
-                                    .join("")}
-
-                            </div>
-
-                        </div>
-
-                    `
-                    : ""
-            }
-
+        <div class="loading-state">
+            ${escapeHTML(text)}
         </div>
-
     `;
-
-
-    showPage("profile");
 }
 
 
 /* =========================================================
-   CONTACT VENDOR
-========================================================= */
+   ERROR HELPERS
+   ========================================================= */
 
-async function contactVendor(id) {
+function showError(container, message) {
 
-    const {
-        data: vendor
-    } = await supabaseClient
-        .from("vendors")
-        .select("*")
-        .eq(
-            "id",
-            id
-        )
-        .single();
+    if (!container) return;
 
+    container.innerHTML = `
+        <div class="empty-state">
+            <h3>Something went wrong.</h3>
 
-    if (!vendor) {
-        return;
-    }
-
-
-    if (vendor.whatsapp) {
-
-        let number =
-            vendor.whatsapp
-                .replace(/\D/g, "");
-
-
-        if (
-            number.length === 10
-        ) {
-
-            number =
-                "91" + number;
-
-        }
-
-
-        window.open(
-            "https://wa.me/" + number,
-            "_blank"
-        );
-
-        return;
-    }
-
-
-    if (vendor.phone) {
-
-        window.location.href =
-            "tel:" +
-            vendor.phone;
-
-        return;
-    }
-
-
-    if (vendor.instagram) {
-
-        let url =
-            vendor.instagram.trim();
-
-
-        if (
-            !url.startsWith("http")
-        ) {
-
-            url =
-                "https://instagram.com/" +
-                url.replace("@", "");
-
-        }
-
-
-        window.open(
-            url,
-            "_blank"
-        );
-
-        return;
-    }
-
-
-    showToast(
-        "This vendor hasn't added contact details yet."
-    );
-}
-
-
-/* =========================================================
-   AUTH MODAL
-========================================================= */
-
-function openAuth(
-    mode = "login",
-    role = ""
-) {
-
-    renderAuth(
-        mode,
-        role
-    );
-
-
-    const modal =
-        document.getElementById(
-            "authModal"
-        );
-
-
-    if (modal) {
-
-        modal.classList.add(
-            "active"
-        );
-
-    }
-}
-
-
-function closeModal(id) {
-
-    const modal =
-        document.getElementById(
-            id
-        );
-
-
-    if (modal) {
-
-        modal.classList.remove(
-            "active"
-        );
-
-    }
-}
-
-
-/* =========================================================
-   AUTH UI
-========================================================= */
-
-function renderAuth(
-    mode,
-    role = ""
-) {
-
-    const container =
-        document.getElementById(
-            "authContent"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (mode === "login") {
-
-        container.innerHTML = `
-
-            <h2 class="auth-title">
-                Welcome back.
-            </h2>
-
-            <p class="auth-subtitle">
-                Log in to your Wed Tale account.
+            <p>
+                ${escapeHTML(message)}
             </p>
-
-
-            <form
-                class="auth-form"
-                onsubmit="login(event)">
-
-                <input
-                    type="email"
-                    id="loginEmail"
-                    placeholder="Email address"
-                    autocomplete="email"
-                    required
-                >
-
-
-                <input
-                    type="password"
-                    id="loginPassword"
-                    placeholder="Password"
-                    autocomplete="current-password"
-                    required
-                >
-
-
-                <button
-                    class="dark-btn"
-                    type="submit">
-
-                    Login
-
-                </button>
-
-            </form>
-
-
-            <div class="auth-switch">
-
-                Don't have an account?
-
-                <button
-                    onclick="renderAuth('signup')">
-
-                    Create one
-
-                </button>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    container.innerHTML = `
-
-        <h2 class="auth-title">
-            Join The Wed Tale.
-        </h2>
-
-        <p class="auth-subtitle">
-            Choose how you'll use the platform.
-        </p>
-
-
-        <form
-            class="auth-form"
-            onsubmit="signup(event)">
-
-
-            <input
-                type="text"
-                id="signupName"
-                placeholder="Your name"
-                autocomplete="name"
-                required
-            >
-
-
-            <input
-                type="email"
-                id="signupEmail"
-                placeholder="Email address"
-                autocomplete="email"
-                required
-            >
-
-
-            <input
-                type="password"
-                id="signupPassword"
-                placeholder="Create password"
-                autocomplete="new-password"
-                minlength="6"
-                required
-            >
-
-
-            <select
-                id="signupRole"
-                required>
-
-                <option value="">
-                    Choose account type
-                </option>
-
-                <option
-                    value="viewer"
-                    ${
-                        role === "viewer"
-                            ? "selected"
-                            : ""
-                    }>
-
-                    Couple / Viewer
-
-                </option>
-
-                <option
-                    value="vendor"
-                    ${
-                        role === "vendor"
-                            ? "selected"
-                            : ""
-                    }>
-
-                    Wedding Vendor
-
-                </option>
-
-            </select>
-
-
-            <button
-                class="dark-btn"
-                type="submit">
-
-                Create Account
-
-            </button>
-
-
-        </form>
-
-
-        <div class="auth-switch">
-
-            Already have an account?
-
-            <button
-                onclick="renderAuth('login')">
-
-                Login
-
-            </button>
-
         </div>
-
     `;
 }
 
 
 /* =========================================================
-   SIGN UP
-========================================================= */
+   WINDOW EXPORTS
+   =========================================================
 
-async function signup(event) {
+   Because the HTML uses inline onclick=""
+   handlers, functions need to be available globally.
+   ========================================================= */
 
-    event.preventDefault();
+window.showPage = showPage;
+window.toggleMobileMenu = toggleMobileMenu;
 
+window.openAuth = openAuth;
+window.closeModal = closeModal;
 
-    const name =
-        document.getElementById(
-            "signupName"
-        ).value.trim();
+window.handleSignup = handleSignup;
+window.handleLogin = handleLogin;
+window.logout = logout;
 
+window.filterVendors = filterVendors;
+window.filterByCategory = filterByCategory;
 
-    const email =
-        document.getElementById(
-            "signupEmail"
-        ).value.trim()
-        .toLowerCase();
+window.searchFromHome = searchFromHome;
+window.homeSearchKey = homeSearchKey;
 
+window.openVendorProfile = openVendorProfile;
 
-    const password =
-        document.getElementById(
-            "signupPassword"
-        ).value;
+window.toggleFavourite = toggleFavourite;
+window.contactVendor = contactVendor;
 
+window.renderFavorites = renderFavorites;
 
-    const role =
-        document.getElementById(
-            "signupRole"
-        ).value;
+window.renderDashboard = renderDashboard;
+window.saveVendor = saveVendor;
 
+window.deletePortfolioImage =
+    deletePortfolioImage;
 
-    if (!role) {
-
-        showToast(
-            "Please choose an account type."
-        );
-
-        return;
-    }
-
-
-    const button =
-        event.target.querySelector(
-            'button[type="submit"]'
-        );
-
-
-    if (button) {
-
-        button.disabled = true;
-
-        button.textContent =
-            "Creating account...";
-
-    }
-
-
-    try {
-
-        /*
-         * The role and name are stored in
-         * Supabase Auth user metadata.
-         *
-         * This is useful because your project currently
-         * has email confirmation enabled.
-         */
-
-            const { data, error } = await supabaseClient.auth.signUp({
-    email: email,
-    password: password,
-    options: {
-        emailRedirectTo: window.location.origin + "/index.html",
-        data: {
-            full_name: name,
-            account_type: role
-        }
-    }
-});
-
-
-        if (error) {
-
-            throw error;
-
-        }
-
-
-        /*
-         * If email confirmation is enabled,
-         * Supabase may return a user without
-         * an active session.
-         */
-
-        if (
-            data.user &&
-            data.session
-        ) {
-
-            currentUser =
-                data.user;
-
-
-            await ensureCurrentProfile();
-
-
-            closeModal(
-                "authModal"
-            );
-
-
-            showToast(
-                "Account created successfully."
-            );
-
-
-            if (
-                role === "vendor"
-            ) {
-
-                showPage(
-                    "dashboard"
-                );
-
-            } else {
-
-                showPage(
-                    "home"
-                );
-
-            }
-
-        } else {
-
-            closeModal(
-                "authModal"
-            );
-
-
-            showToast(
-                "Account created. Check your email to confirm it, then log in."
-            );
-
-        }
-
-    } catch (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not create your account."
-        );
-
-    } finally {
-
-        if (button) {
-
-            button.disabled = false;
-
-            button.textContent =
-                "Create Account";
-
-        }
-
-    }
-}
+window.openExternal = openExternal;
+window.openCategory = openCategory;
 
 
 /* =========================================================
-   LOGIN
-========================================================= */
-
-async function login(event) {
-
-    event.preventDefault();
-
-
-    const email =
-        document.getElementById(
-            "loginEmail"
-        ).value.trim()
-        .toLowerCase();
-
-
-    const password =
-        document.getElementById(
-            "loginPassword"
-        ).value;
-
-
-    const button =
-        event.target.querySelector(
-            'button[type="submit"]'
-        );
-
-
-    if (button) {
-
-        button.disabled = true;
-
-        button.textContent =
-            "Logging in...";
-
-    }
-
-
-    try {
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-            .auth
-            .signInWithPassword({
-
-                email,
-
-                password
-
-            });
-
-
-        if (error) {
-
-            throw error;
-
-        }
-
-
-        currentUser =
-            data.user;
-
-
-        await ensureCurrentProfile();
-
-
-        closeModal(
-            "authModal"
-        );
-
-
-        const name =
-            currentProfile?.full_name ||
-            currentUser.email
-                ?.split("@")[0] ||
-            "there";
-
-
-        showToast(
-            "Welcome back, " +
-            name +
-            "."
-        );
-
-
-        const role =
-            currentProfile?.account_type ||
-            currentUser.user_metadata
-                ?.account_type ||
-            "viewer";
-
-
-        if (
-            role === "vendor"
-        ) {
-
-            showPage(
-                "dashboard"
-            );
-
-        } else {
-
-            showPage(
-                "home"
-            );
-
-        }
-
-    } catch (error) {
-
-        handleSupabaseError(
-            error,
-            "Incorrect email or password."
-        );
-
-    } finally {
-
-        if (button) {
-
-            button.disabled = false;
-
-            button.textContent =
-                "Login";
-
-        }
-
-    }
-}
-
-
-/* =========================================================
-   LOGOUT
-========================================================= */
-
-async function logout() {
-
-    const {
-        error
-    } = await supabaseClient
-        .auth
-        .signOut();
-
-
-    if (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not log out."
-        );
-
-        return;
-    }
-
-
-    currentUser = null;
-
-    currentProfile = null;
-
-
-    showToast(
-        "You've been logged out."
-    );
-
-
-    showPage(
-        "home"
-    );
-}
-
-
-/* =========================================================
-   VENDOR DASHBOARD
-========================================================= */
-
-async function renderDashboard() {
-
-    const container =
-        document.getElementById(
-            "dashboardContent"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!currentUser) {
-
-        container.innerHTML = `
-
-            <div class="dashboard">
-
-                <div class="empty-state">
-
-                    <h3>
-                        Vendor dashboard
-                    </h3>
-
-                    <p>
-                        Log in with a vendor account
-                        to manage your business.
-                    </p>
-
-                    <button
-                        class="dark-btn"
-                        onclick="openAuth('login')">
-
-                        Login
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    const role =
-        currentProfile?.account_type ||
-        currentUser.user_metadata
-            ?.account_type;
-
-
-    if (role !== "vendor") {
-
-        container.innerHTML = `
-
-            <div class="dashboard">
-
-                <div class="empty-state">
-
-                    <h3>
-                        Vendor access only.
-                    </h3>
-
-                    <p>
-                        This dashboard is for wedding vendors.
-                    </p>
-
-                </div>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    const {
-        data: myListings,
-        error
-    } = await supabaseClient
-        .from("vendors")
-        .select("*")
-        .eq(
-            "user_id",
-            currentUser.id
-        )
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        );
-
-
-    if (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not load your listings."
-        );
-
-        return;
-    }
-
-
-    const listings =
-        myListings || [];
-
-
-    container.innerHTML = `
-
-        <div class="dashboard">
-
-            <div class="dashboard-header">
-
-                <div>
-
-                    <p class="eyebrow">
-                        VENDOR STUDIO
-                    </p>
-
-                    <h1>
-                        Welcome,
-                        ${escapeHTML(
-                            currentProfile?.full_name ||
-                            currentUser.email
-                        )}.
-                    </h1>
-
-                </div>
-
-
-                <button
-                    class="dark-btn"
-                    onclick="openListingForm()">
-
-                    + Add Listing
-
-                </button>
-
-            </div>
-
-
-            <div class="dashboard-grid">
-
-                <div class="stat-card">
-
-                    <span>
-                        YOUR LISTINGS
-                    </span>
-
-                    <strong>
-                        ${listings.length}
-                    </strong>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <span>
-                        SAVED BY USERS
-                    </span>
-
-                    <strong>
-                        —
-                    </strong>
-
-                </div>
-
-
-                <div class="stat-card">
-
-                    <span>
-                        PROFILE STATUS
-                    </span>
-
-                    <strong>
-                        ${
-                            listings.length
-                                ? "LIVE"
-                                : "—"
-                        }
-                    </strong>
-
-                </div>
-
-            </div>
-
-
-            <div class="dashboard-card">
-
-                <h2>
-                    Your listings
-                </h2>
-
-
-                ${
-                    listings.length
-                        ?
-
-                        listings
-                            .map(
-                                vendor => `
-
-                                    <div class="listing-row">
-
-                                        <div>
-
-                                            <h3>
-                                                ${escapeHTML(
-                                                    vendor.business_name
-                                                )}
-                                            </h3>
-
-                                            <span>
-                                                ${escapeHTML(
-                                                    vendor.category
-                                                )}
-
-                                                ·
-
-                                                ${escapeHTML(
-                                                    vendor.city
-                                                )}
-                                            </span>
-
-                                        </div>
-
-
-                                        <div class="listing-actions">
-
-                                            <button
-                                                class="small-outline"
-                                                onclick="openVendor('${vendor.id}')">
-
-                                                View
-
-                                            </button>
-
-
-                                            <button
-                                                class="small-outline"
-                                                onclick="openListingForm('${vendor.id}')">
-
-                                                Edit
-
-                                            </button>
-
-
-                                            <button
-                                                class="small-danger"
-                                                onclick="deleteListing('${vendor.id}')">
-
-                                                Delete
-
-                                            </button>
-
-                                        </div>
-
-                                    </div>
-
-                                `
-                            )
-                            .join("")
-
-                        :
-
-                        `
-
-                            <div class="empty-state">
-
-                                <h3>
-                                    Your business isn't listed yet.
-                                </h3>
-
-                                <p>
-                                    Create your first vendor profile
-                                    to appear in the directory.
-                                </p>
-
-                                <button
-                                    class="dark-btn"
-                                    onclick="openListingForm()">
-
-                                    Create Listing
-
-                                </button>
-
-                            </div>
-
-                        `
-                }
-
-            </div>
-
-        </div>
-
-    `;
-}
-
-
-/* =========================================================
-   LISTING FORM
-========================================================= */
-
-async function openListingForm(
-    editId = null
-) {
-
-    if (!currentUser) {
-
-        openAuth(
-            "login"
-        );
-
-        return;
-    }
-
-
-    const role =
-        currentProfile?.account_type ||
-        currentUser.user_metadata
-            ?.account_type;
-
-
-    if (role !== "vendor") {
-
-        showToast(
-            "Only vendor accounts can create listings."
-        );
-
-        return;
-    }
-
-
-    let existing = null;
-
-
-    if (editId) {
-
-        const {
-            data,
-            error
-        } = await supabaseClient
-            .from("vendors")
-            .select("*")
-            .eq(
-                "id",
-                editId
-            )
-            .eq(
-                "user_id",
-                currentUser.id
-            )
-            .single();
-
-
-        if (error) {
-
-            handleSupabaseError(
-                error,
-                "Could not load this listing."
-            );
-
-            return;
-        }
-
-
-        existing =
-            data;
-    }
-
-
-    const container =
-        document.getElementById(
-            "dashboardContent"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    container.innerHTML = `
-
-        <div class="form-wrapper">
-
-            <button
-                class="profile-back"
-                onclick="renderDashboard()">
-
-                ← Back to dashboard
-
-            </button>
-
-
-            <p class="eyebrow">
-                VENDOR PROFILE
-            </p>
-
-
-            <h1>
-                ${
-                    existing
-                        ? "Edit your listing."
-                        : "Tell Gujarat about your work."
-                }
-            </h1>
-
-
-            <form
-                onsubmit="saveListing(event, '${
-                    existing
-                        ? existing.id
-                        : ""
-                }')">
-
-
-                <div class="form-grid">
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Business Name *
-                        </label>
-
-                        <input
-                            id="businessName"
-                            type="text"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.business_name
-                                    )
-                                    : ""
-                            }"
-                            placeholder="e.g. Studio Nysa"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Category *
-                        </label>
-
-                        <select
-                            id="businessCategory"
-                            required>
-
-                            <option value="">
-                                Select category
-                            </option>
-
-                            ${
-                                categories
-                                    .map(
-                                        category => `
-
-                                            <option
-                                                value="${escapeHTML(
-                                                    category.name
-                                                )}"
-                                                ${
-                                                    existing &&
-                                                    existing.category ===
-                                                        category.name
-                                                        ? "selected"
-                                                        : ""
-                                                }>
-
-                                                ${escapeHTML(
-                                                    category.name
-                                                )}
-
-                                            </option>
-
-                                        `
-                                    )
-                                    .join("")
-                            }
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            City *
-                        </label>
-
-                        <select
-                            id="businessCity"
-                            required>
-
-                            <option value="">
-                                Select city
-                            </option>
-
-                            ${
-                                cities
-                                    .map(
-                                        city => `
-
-                                            <option
-                                                value="${escapeHTML(city)}"
-                                                ${
-                                                    existing &&
-                                                    existing.city === city
-                                                        ? "selected"
-                                                        : ""
-                                                }>
-
-                                                ${escapeHTML(city)}
-
-                                            </option>
-
-                                        `
-                                    )
-                                    .join("")
-                            }
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Starting Price
-                        </label>
-
-                        <input
-                            id="businessPrice"
-                            type="number"
-                            min="0"
-                            value="${
-                                existing &&
-                                existing.starting_price !== null
-                                    ? escapeHTML(
-                                        existing.starting_price
-                                    )
-                                    : ""
-                            }"
-                            placeholder="50000"
-                        >
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Phone
-                        </label>
-
-                        <input
-                            id="businessPhone"
-                            type="tel"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.phone
-                                    )
-                                    : ""
-                            }"
-                            placeholder="+91..."
-                        >
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            WhatsApp
-                        </label>
-
-                        <input
-                            id="businessWhatsapp"
-                            type="tel"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.whatsapp
-                                    )
-                                    : ""
-                            }"
-                            placeholder="+91..."
-                        >
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Instagram
-                        </label>
-
-                        <input
-                            id="businessInstagram"
-                            type="text"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.instagram
-                                    )
-                                    : ""
-                            }"
-                            placeholder="@yourhandle"
-                        >
-
-                    </div>
-
-
-                    <div class="form-field">
-
-                        <label>
-                            Website
-                        </label>
-
-                        <input
-                            id="businessWebsite"
-                            type="url"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.website
-                                    )
-                                    : ""
-                            }"
-                            placeholder="https://..."
-                        >
-
-                    </div>
-
-
-                    <div class="form-field full">
-
-                        <label>
-                            Portfolio Image URL
-                        </label>
-
-                        <input
-                            id="businessImage"
-                            type="url"
-                            value="${
-                                existing
-                                    ? escapeHTML(
-                                        existing.cover_image
-                                    )
-                                    : ""
-                            }"
-                            placeholder="https://..."
-                        >
-
-                    </div>
-
-
-                    <div class="form-field full">
-
-                        <label>
-                            Or Upload Portfolio Image
-                        </label>
-
-                        <input
-                            id="businessImageFile"
-                            type="file"
-                            accept="image/*"
-                        >
-
-                        <small>
-                            JPG, PNG or WebP. Keep images reasonably sized.
-                        </small>
-
-                    </div>
-
-
-                    <div class="form-field full">
-
-                        <label>
-                            About Your Business *
-                        </label>
-
-                        <textarea
-                            id="businessDescription"
-                            placeholder="Tell couples about your style, experience and services..."
-                            required>${
-                                existing
-                                    ? escapeHTML(
-                                        existing.description
-                                    )
-                                    : ""
-                            }</textarea>
-
-                    </div>
-
-
-                </div>
-
-
-                <div class="form-buttons">
-
-                    <button
-                        type="submit"
-                        class="dark-btn">
-
-                        ${
-                            existing
-                                ? "Update Listing"
-                                : "Publish Listing"
-                        }
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="outline-btn"
-                        onclick="renderDashboard()">
-
-                        Cancel
-
-                    </button>
-
-                </div>
-
-
-            </form>
-
-        </div>
-
-    `;
-}
-
-
-/* =========================================================
-   UPLOAD IMAGE
-========================================================= */
-
-async function uploadVendorImage(
-    file,
-    vendorId
-) {
-
-    if (!file) {
-        return null;
-    }
-
-
-    if (!file.type.startsWith("image/")) {
-
-        throw new Error(
-            "Please select an image file."
-        );
-
-    }
-
-
-    /*
-     * Keep browser uploads reasonably small.
-     */
-
-    if (
-        file.size >
-        6 * 1024 * 1024
-    ) {
-
-        throw new Error(
-            "Please use an image smaller than 6 MB."
-        );
-
-    }
-
-
-    const extension =
-        file.name
-            .split(".")
-            .pop()
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
-
-
-    const fileName =
-        `${vendorId}-${Date.now()}-${Math.random()
-            .toString(36)
-            .substring(2, 8)}.${extension}`;
-
-
-    /*
-     * IMPORTANT:
-     * First folder is the authenticated user's UUID.
-     *
-     * This matches the Storage RLS policies
-     * you created earlier.
-     */
-
-    const filePath =
-        `${currentUser.id}/${fileName}`;
-
-
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .storage
-        .from(STORAGE_BUCKET)
-        .upload(
-            filePath,
-            file,
-            {
-                cacheControl: "3600",
-                upsert: false,
-                contentType: file.type
-            }
-        );
-
-
-    if (error) {
-
-        throw error;
-
-    }
-
-
-    /*
-     * This requires the vendor-images bucket
-     * to be PUBLIC.
-     */
-
-    const {
-        data: publicData
-    } = supabaseClient
-        .storage
-        .from(STORAGE_BUCKET)
-        .getPublicUrl(
-            data.path
-        );
-
-
-    return publicData.publicUrl;
-}
-
-
-/* =========================================================
-   SAVE LISTING
-========================================================= */
-
-async function saveListing(
-    event,
-    editId
-) {
-
-    event.preventDefault();
-
-
-    if (!currentUser) {
-
-        showToast(
-            "Please log in first."
-        );
-
-        return;
-    }
-
-
-    const businessName =
-        document.getElementById(
-            "businessName"
-        ).value.trim();
-
-
-    const category =
-        document.getElementById(
-            "businessCategory"
-        ).value;
-
-
-    const city =
-        document.getElementById(
-            "businessCity"
-        ).value;
-
-
-    const priceInput =
-        document.getElementById(
-            "businessPrice"
-        ).value.trim();
-
-
-    const phone =
-        document.getElementById(
-            "businessPhone"
-        ).value.trim();
-
-
-    const whatsapp =
-        document.getElementById(
-            "businessWhatsapp"
-        ).value.trim();
-
-
-    const instagram =
-        document.getElementById(
-            "businessInstagram"
-        ).value.trim();
-
-
-    const website =
-        document.getElementById(
-            "businessWebsite"
-        ).value.trim();
-
-
-    const imageUrl =
-        document.getElementById(
-            "businessImage"
-        ).value.trim();
-
-
-    const imageFile =
-        document.getElementById(
-            "businessImageFile"
-        )?.files?.[0] || null;
-
-
-    const description =
-        document.getElementById(
-            "businessDescription"
-        ).value.trim();
-
-
-    const price =
-        priceInput
-            ? Number(priceInput)
-            : null;
-
-
-    const submitButton =
-        event.target.querySelector(
-            'button[type="submit"]'
-        );
-
-
-    if (submitButton) {
-
-        submitButton.disabled =
-            true;
-
-        submitButton.textContent =
-            "Publishing...";
-
-    }
-
-
-    try {
-
-        let vendorId =
-            editId;
-
-
-        /*
-         * =====================================================
-         * CREATE LISTING
-         * =====================================================
-         */
-
-        if (!editId) {
-
-            const {
-                data,
-                error
-            } = await supabaseClient
-                .from("vendors")
-                .insert({
-
-                    user_id:
-                        currentUser.id,
-
-                    business_name:
-                        businessName,
-
-                    category,
-
-                    city,
-
-                    description,
-
-                    phone,
-
-                    whatsapp,
-
-                    instagram,
-
-                    website,
-
-                    starting_price:
-                        price,
-
-                    cover_image:
-                        imageUrl ||
-                        null,
-
-                    /*
-                     * For now, vendor listings go live
-                     * immediately because we haven't built
-                     * an admin approval dashboard yet.
-                     */
-                    is_approved:
-                        true
-
-                })
-                .select()
-                .single();
-
-
-            if (error) {
-
-                throw error;
-
-            }
-
-
-            vendorId =
-                data.id;
-
-
-            /*
-             * If the vendor uploaded a file,
-             * upload it after the vendor row exists.
-             */
-
-            if (imageFile) {
-
-                const uploadedUrl =
-                    await uploadVendorImage(
-                        imageFile,
-                        vendorId
-                    );
-
-
-                const {
-                    error:
-                        updateError
-                } = await supabaseClient
-                    .from("vendors")
-                    .update({
-                        cover_image:
-                            uploadedUrl
-                    })
-                    .eq(
-                        "id",
-                        vendorId
-                    )
-                    .eq(
-                        "user_id",
-                        currentUser.id
-                    );
-
-
-                if (updateError) {
-
-                    throw updateError;
-
-                }
-
-
-                await saveVendorImageRecord(
-                    vendorId,
-                    uploadedUrl
-                );
-            }
-
-
-            showToast(
-                "Your listing is now live."
-            );
-
-        }
-
-
-        /*
-         * =====================================================
-         * UPDATE LISTING
-         * =====================================================
-         */
-
-        else {
-
-            const updateData = {
-
-                business_name:
-                    businessName,
-
-                category,
-
-                city,
-
-                description,
-
-                phone,
-
-                whatsapp,
-
-                instagram,
-
-                website,
-
-                starting_price:
-                    price
-
-            };
-
-
-            /*
-             * If URL supplied, use URL.
-             * If a new file is uploaded, the file
-             * will replace the cover image.
-             */
-
-            if (imageUrl) {
-
-                updateData.cover_image =
-                    imageUrl;
-
-            }
-
-
-            const {
-                data,
-                error
-            } = await supabaseClient
-                .from("vendors")
-                .update(
-                    updateData
-                )
-                .eq(
-                    "id",
-                    editId
-                )
-                .eq(
-                    "user_id",
-                    currentUser.id
-                )
-                .select()
-                .single();
-
-
-            if (error) {
-
-                throw error;
-
-            }
-
-
-            if (imageFile) {
-
-                const uploadedUrl =
-                    await uploadVendorImage(
-                        imageFile,
-                        editId
-                    );
-
-
-                const {
-                    error:
-                        imageUpdateError
-                } = await supabaseClient
-                    .from("vendors")
-                    .update({
-
-                        cover_image:
-                            uploadedUrl,
-
-                        updated_at:
-                            new Date()
-                                .toISOString()
-
-                    })
-                    .eq(
-                        "id",
-                        editId
-                    )
-                    .eq(
-                        "user_id",
-                        currentUser.id
-                    );
-
-
-                if (imageUpdateError) {
-
-                    throw imageUpdateError;
-
-                }
-
-
-                await saveVendorImageRecord(
-                    editId,
-                    uploadedUrl
-                );
-
-            }
-
-
-            showToast(
-                "Listing updated."
-            );
-        }
-
-
-        await renderDashboard();
-
-
-    } catch (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not save your listing."
-        );
-
-    } finally {
-
-        if (submitButton) {
-
-            submitButton.disabled =
-                false;
-
-            submitButton.textContent =
-                editId
-                    ? "Update Listing"
-                    : "Publish Listing";
-
-        }
-
-    }
-}
-
-
-/* =========================================================
-   SAVE VENDOR IMAGE RECORD
-========================================================= */
-
-async function saveVendorImageRecord(
-    vendorId,
-    imageUrl
-) {
-
-    if (!imageUrl) {
-        return;
-    }
-
-
-    const {
-        error
-    } = await supabaseClient
-        .from("vendor_images")
-        .insert({
-
-            vendor_id:
-                vendorId,
-
-            image_url:
-                imageUrl
-
-        });
-
-
-    if (error) {
-
-        console.error(
-            "Vendor image record error:",
-            error
-        );
-
-    }
-}
-
-
-/* =========================================================
-   DELETE LISTING
-========================================================= */
-
-async function deleteListing(id) {
-
-    if (!currentUser) {
-        return;
-    }
-
-
-    const confirmed =
-        confirm(
-            "Delete this vendor listing?"
-        );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    /*
-     * First get images so that we can also
-     * remove them from Storage.
-     */
-
-    const {
-        data: imageRecords
-    } = await supabaseClient
-        .from("vendor_images")
-        .select("image_url")
-        .eq(
-            "vendor_id",
-            id
-        );
-
-
-    const {
-        error
-    } = await supabaseClient
-        .from("vendors")
-        .delete()
-        .eq(
-            "id",
-            id
-        )
-        .eq(
-            "user_id",
-            currentUser.id
-        );
-
-
-    if (error) {
-
-        handleSupabaseError(
-            error,
-            "Could not delete listing."
-        );
-
-        return;
-    }
-
-
-    /*
-     * The vendor_images rows are automatically
-     * deleted because vendor_id has ON DELETE CASCADE.
-     *
-     * Storage files need separate deletion.
-     */
-
-    if (
-        imageRecords &&
-        imageRecords.length
-    ) {
-
-        const paths =
-            imageRecords
-                .map(
-                    item =>
-                        getStoragePathFromUrl(
-                            item.image_url
-                        )
-                )
-                .filter(Boolean);
-
-
-        if (paths.length) {
-
-            const {
-                error:
-                    storageError
-            } = await supabaseClient
-                .storage
-                .from(STORAGE_BUCKET)
-                .remove(paths);
-
-
-            if (storageError) {
-
-                console.warn(
-                    "Storage cleanup warning:",
-                    storageError
-                );
-
-            }
-        }
-    }
-
-
-    showToast(
-        "Listing deleted."
-    );
-
-
-    await renderDashboard();
-}
-
-
-/* =========================================================
-   GET STORAGE PATH FROM PUBLIC URL
-========================================================= */
-
-function getStoragePathFromUrl(
-    url
-) {
-
-    if (!url) {
-        return null;
-    }
-
-
-    const marker =
-        `/storage/v1/object/public/${STORAGE_BUCKET}/`;
-
-
-    const index =
-        url.indexOf(marker);
-
-
-    if (index === -1) {
-
-        return null;
-
-    }
-
-
-    return decodeURIComponent(
-        url.substring(
-            index + marker.length
-        )
-    );
-}
-
-
-/* =========================================================
-   CLOSE AUTH MODAL
-========================================================= */
-
-const authModal =
-    document.getElementById(
-        "authModal"
-    );
-
-
-if (authModal) {
-
-    authModal.addEventListener(
-        "click",
-        function(event) {
-
-            if (
-                event.target ===
-                this
-            ) {
-
-                closeModal(
-                    "authModal"
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   SEARCH INPUT EVENTS
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        const vendorSearch =
-            document.getElementById(
-                "vendorSearch"
-            );
-
-
-        const categoryFilter =
-            document.getElementById(
-                "categoryFilter"
-            );
-
-
-        const cityFilter =
-            document.getElementById(
-                "cityFilter"
-            );
-
-
-        if (vendorSearch) {
-
-            vendorSearch.addEventListener(
-                "input",
-                () => {
-
-                    filterVendors();
-
-                }
-            );
-
-        }
-
-
-        if (categoryFilter) {
-
-            categoryFilter.addEventListener(
-                "change",
-                () => {
-
-                    filterVendors();
-
-                }
-            );
-
-        }
-
-
-        if (cityFilter) {
-
-            cityFilter.addEventListener(
-                "change",
-                () => {
-
-                    filterVendors();
-
-                }
-            );
-
-        }
-
-    }
+   FINAL
+   ========================================================= */
+
+console.log(
+    "The Wed Tale Gujarat script initialized successfully."
 );
-
-
-/* =========================================================
-   START APPLICATION
-========================================================= */
-
-async function startApp() {
-
-    try {
-
-        console.log(
-            "Starting The Wed Tale Gujarat..."
-        );
-
-
-        await loadAuthState();
-
-
-        prepareFilters();
-
-
-        await renderHome();
-
-
-        updateNavigation();
-
-
-        console.log(
-            "The Wed Tale Gujarat is ready."
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Application startup error:",
-            error
-        );
-
-        showToast(
-            "Website could not finish loading."
-        );
-
-    }
-}
-
-
-/* =========================================================
-   START
-========================================================= */
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        startApp
-    );
-
-} else {
-
-    startApp();
-
-}
