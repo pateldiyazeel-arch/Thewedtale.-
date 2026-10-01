@@ -4973,6 +4973,10 @@ function showError(
    be available globally.
    ========================================================= */
 
+       console.log("openAuth type:", typeof openAuth);
+console.log("showPage type:", typeof showPage);
+console.log("supabaseClient:", supabaseClient);
+
 window.showPage =
     showPage;
 
